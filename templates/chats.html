@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Chats{% endblock %}
+
+{% block content %}
+<h2>Your Chats</h2>
+
+<div class="chat-list">
+  {% for chat in chats %}
+    <a href="{{ url_for('chat', peer_id=chat.peer.id) }}" class="chat-item">
+      <div class="chat-name">{{ chat.peer.username }}</div>
+
+      {% if chat.unread > 0 %}
+        <span class="chat-badge">{{ chat.unread }}</span>
+      {% endif %}
+    </a>
+  {% else %}
+    <p>No chats yet</p>
+  {% endfor %}
+</div>
+{% endblock %}

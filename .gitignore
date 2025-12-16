@@ -1,0 +1,46 @@
+# -------------------------
+# Python cache
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+
+# -------------------------
+# Virtual environments
+# -------------------------
+venv/
+virtualenv/
+.env
+
+# -------------------------
+# Flask instance folder
+# (contains SQLite DB, secrets)
+# -------------------------
+instance/
+
+# -------------------------
+# Database files (extra safety)
+# -------------------------
+*.db
+*.sqlite3
+
+# -------------------------
+# Uploaded & generated files
+# -------------------------
+static/uploads/
+static/results/
+
+# -------------------------
+# Machine learning models
+# -------------------------
+models/*.keras
+models/*.h5
+
+# -------------------------
+# OS / editor files
+# -------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+models/

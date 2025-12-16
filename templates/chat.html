@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+
+<div class="chat-wrapper">
+
+  <!-- CHAT HEADER -->
+  <div class="chat-header">
+    <a href="{{ url_for('chats') }}" class="back-btn">← Back to Chats</a>
+    <span class="chat-user">{{ peer.username }}</span>
+  </div>
+
+  <!-- MESSAGES -->
+  <div id="messages" class="chat-messages"></div>
+
+  <!-- INPUT -->
+  <div class="chat-input">
+    <input type="text" id="msg" placeholder="Type a message…" />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+</div>
+
+<script>
+const PEER_ID = {{ peer.id }};
+</script>
+<script src="{{ url_for('static', filename='chat.js') }}"></script>
+{% endblock %}

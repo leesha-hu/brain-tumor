@@ -1,0 +1,151 @@
+:root {
+  --primary-color: #4E89AE;
+  --accent-color: #F6C667;
+  --light-bg: #EAF4F4;
+  --dark-text: #1F1F1F;
+  --footer-bg: #1F3A5F;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-image: url("../images/basic.jpeg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  margin: 0;
+  padding: 0;
+}
+
+/* Do NOT define header here. Base.html handles it */
+
+/* Main container */
+.container {
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+}
+
+/* White content box */
+.combined-box {
+  display: flex;
+  flex-wrap: wrap;
+  background: white;
+  max-width: 1000px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  padding: 30px;
+  gap: 30px;
+}
+
+/* Text section */
+.text-section {
+  flex: 1;
+  min-width: 300px;
+}
+
+.text-section h2 {
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.text-section p {
+  color: #444;
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+/* Image section */
+.image-section {
+  flex: 1;
+  text-align: center;
+  min-width: 250px;
+}
+
+.image-section img {
+  background-color: #1F1F1F;
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.05);
+}
+
+/* Features section */
+.features-section {
+  background: #f0f0f0;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.features-section h2 {
+  color: #333;
+  margin-bottom: 40px;
+}
+
+/* Features grid */
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+}
+
+/* Individual feature box */
+.feature-box {
+  background: white;
+  padding: 25px;
+  width: 300px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.08);
+}
+
+.feature-box h3 {
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+.feature-box p {
+  color: #555;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Flash messages */
+.flash {
+  padding: 10px;
+  margin: 15px auto;
+  border-radius: 5px;
+  width: 90%;
+  max-width: 600px;
+  text-align: center;
+}
+
+.flash.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.flash.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Footer */
+footer {
+  background-color: var(--footer-bg);
+  color: white;
+  text-align: center;
+  padding: 15px;
+  margin-top: 50px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .combined-box {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .text-section, .image-section {
+    text-align: center;
+  }
+}

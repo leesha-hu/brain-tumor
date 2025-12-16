@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TumorVision{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+
+<!-- Secondary dashboard nav -->
+<div class="dashboard-nav">
+  <a href="{{ url_for('profile') }}">Profile</a>
+  
+  <a href="{{ url_for('chats') }}">Chats</a>
+  
+
+</div>
+
+<h2>Welcome, {{ current_user.username }}</h2>
+
+<div class="predict-card">
+  <h3>Brain Tumor Prediction</h3>
+
+  <form action="{{ url_for('upload_predict') }}"
+        method="post"
+        enctype="multipart/form-data">
+
+    <label>Select Model</label>
+    <select name="model_name" required>
+      <option value="" disabled selected>Select Model</option>
+      <option value="xception">Xception</option>
+      <option value="resnet">ResNet50</option>
+      <option value="densenet">DenseNet121</option>
+      <option value="efficientnet">EfficientNet</option>
+    </select>
+
+    <label>Upload MRI Image</label>
+    <input type="file"
+           name="image"
+           accept="image/png, image/jpeg"
+           required>
+
+    <button type="submit">Upload & Predict</button>
+  </form>
+</div>
+
+{% endblock %}

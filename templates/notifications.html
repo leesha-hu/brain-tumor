@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='notifications.css') }}">
+
+<h2>Notifications</h2>
+
+{% if results %}
+  <div class="notif-list">
+    {% for item in results %}
+      <a href="{{ url_for('chat', peer_id=item.peer.id) }}" class="notif-item">
+        <div class="notif-user">
+          {{ item.peer.username }}
+        </div>
+        <div class="notif-count">
+          {{ item.count }}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No new messages</p>
+{% endif %}
+
+{% endblock %}

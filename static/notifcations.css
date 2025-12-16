@@ -1,0 +1,33 @@
+.notif-list {
+  max-width: 600px;
+  margin: auto;
+}
+
+.notif-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+  background: #fff;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.notif-item:hover {
+  background: #f1f7fb;
+}
+
+.notif-user {
+  font-weight: 600;
+}
+
+.notif-count {
+  background: #25d366; /* WhatsApp green */
+  color: white;
+  padding: 6px 10px;
+  border-radius: 50%;
+  font-size: 14px;
+}

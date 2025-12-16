@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block header_buttons %}
+  <a href="{{ url_for('patient_dashboard') }}" class="btn-secondary">Back to Dashboard</a>
+  <a href="{{ url_for('logout') }}" class="btn-secondary">Logout</a>
+{% endblock %}
+
+{% block title %}Prediction Result{% endblock %}
+
+{% block content %}
+<h2>Prediction Result</h2>
+
+<div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+  <div>
+    <h4>Original</h4>
+    <img src="{{ orig_url }}" alt="original" style="max-width:420px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
+  </div>
+
+  <div>
+    <h4>Grad-CAM Overlay</h4>
+    {% if result_url %}
+      <img src="{{ result_url }}" alt="gradcam" style="max-width:420px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
+    {% else %}
+      <p>Heatmap not generated.</p>
+    {% endif %}
+  </div>
+</div>
+
+<p style="margin-top:18px"><strong>Prediction:</strong> {{ label }} ({{ confidence }}%)</p>
+<a href="{{ url_for('patient_dashboard') }}" class="btn-secondary">Back to Dashboard</a>
+{% endblock %}

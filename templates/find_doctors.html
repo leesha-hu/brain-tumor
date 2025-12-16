@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Find Doctors{% endblock %}
+
+{% block content %}
+<h2>Available Doctors</h2>
+
+<ul class="doctor-list">
+  {% for d in doctors %}
+    <li>
+      {{ d.username }}
+      <a href="{{ url_for('chat', peer_id=d.id) }}">Chat</a>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

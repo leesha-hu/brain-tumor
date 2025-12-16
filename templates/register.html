@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block header_buttons %}
+  <a href="{{ url_for('home') }}" class="btn-secondary">Back to Home</a>
+{% endblock %}
+
+{% block title %}Register - TumorVision{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <h2 class="auth-title">Register</h2>
+
+    <form method="POST" class="form" id="register-form" novalidate>
+
+      <label class="form-label">Username
+        <input name="username" required class="form-input" />
+      </label>
+
+      <label class="form-label">Email
+        <input type="email" name="email" required class="form-input" />
+      </label>
+
+      <label class="form-label">Password
+        <input type="password" name="password" required class="form-input" />
+      </label>
+
+      <label class="form-label">Register as
+  <select name="role" id="role-select" required class="form-select">
+      <option value="" disabled selected>Select Role</option>
+      <option value="patient">Patient</option>
+      <option value="doctor">Doctor</option>
+  </select>
+</label>
+
+
+      <!-- hospital appears only when doctor is selected -->
+      <label class="form-label" id="hospital-row" style="display:none;">
+        Hospital / Clinic Name
+        <input type="text" name="hospital" id="hospital-input" class="form-input" />
+      </label>
+
+      <button type="submit" class="auth-btn">Register</button>
+    </form>
+
+    <p class="auth-foot">
+      Already have an account?
+      <a href="{{ url_for('login') }}">Login here</a>
+    </p>
+
+  </div>
+</div>
+
+<script>
+  const roleSelect = document.getElementById("role-select");
+  const hospitalRow = document.getElementById("hospital-row");
+  const hospitalInput = document.getElementById("hospital-input");
+
+  roleSelect.addEventListener("change", function () {
+    if (this.value === "doctor") {
+      hospitalRow.style.display = "block";
+      hospitalInput.setAttribute("required", "required");
+    } else {
+      hospitalRow.style.display = "none";
+      hospitalInput.removeAttribute("required");
+      hospitalInput.value = "";
+    }
+  });
+  document.getElementById("register-form").addEventListener("submit", function (e) {
+    const role = document.getElementById("role-select").value;
+
+    if (role === "") {
+        alert("Please select a role before registering.");
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+
+{% endblock %}

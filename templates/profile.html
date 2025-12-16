@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - TumorVision{% endblock %}
+
+{% block header_buttons %}
+<a href="{{ url_for('patient_dashboard') if current_user.role == 'patient'
+            else url_for('doctor_dashboard') }}">
+  Back to Dashboard
+</a>
+{% endblock %}
+
+{% block content %}
+<h2>Profile</h2>
+<p><strong>Username:</strong> {{ current_user.username }}</p>
+<p><strong>Email:</strong> {{ current_user.email }}</p>
+{% endblock %}
