@@ -7,8 +7,7 @@ MODELS_DIR = os.path.join(BASE_DIR, "models")
 
 def rebuild_model(model_folder, output_name):
     folder_path = os.path.join(MODELS_DIR, model_folder)
-
-    config_path = os.path.join(folder_path, "config.json")
+config_path = os.path.join(folder_path, "config.json")
     weights_path = os.path.join(folder_path, "model.weights.h5")
 
     print("Looking for:", config_path)

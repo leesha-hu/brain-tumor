@@ -58,12 +58,12 @@ def create_app():
         "efficientnet": load_model_from_folder(os.path.join(MODEL_FOLDER, "efficient")),
     }
 
-    CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"] 
+    CLASS_NAMES = ["glioma", "meningioma", "pituitary", "no_tumor"]
 
     # -------------------------------------------------
     # GRAD-CAM
     # -------------------------------------------------
-    def make_gradcam_heatmap_densenet(img_array, model, pred_index):
+    def make_gradcam_heatmap(img_array, model, pred_index):
         last_conv_layer = None
         for layer in reversed(model.layers):
             try:
@@ -83,64 +83,12 @@ def create_app():
 
         with tf.GradientTape() as tape:
             conv_outputs, predictions = grad_model(img_array, training=False)
+
             if isinstance(predictions, (list, tuple)):
                 predictions = predictions[0]
+
             loss = predictions[:, pred_index]
 
-        grads = tape.gradient(loss, conv_outputs)
-        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
-
-        conv_outputs = conv_outputs[0]
-        heatmap = tf.reduce_sum(conv_outputs * pooled_grads, axis=-1)
-
-        heatmap = tf.maximum(heatmap, 0)
-        heatmap /= tf.reduce_max(heatmap) + 1e-10
-
-        return heatmap.numpy()
-
-    def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
-        # 1. Get layers
-        data_aug_layer = model.get_layer("sequential_1")
-        base_model = model.get_layer(last_conv_layer_name)
-
-        # 2. Collect classifier layers (after EfficientNet)
-        classifier_layers = []
-        found = False
-        for layer in model.layers:
-            if layer.name == last_conv_layer_name:
-                found = True
-                continue
-            if found:
-                if isinstance(
-                    layer,
-                    (
-                        tf.keras.layers.GlobalAveragePooling2D,
-                        tf.keras.layers.Dense,
-                        tf.keras.layers.Dropout,
-                    ),
-                ):
-                    classifier_layers.append(layer)
-
-        # 3. Gradient computation
-        with tf.GradientTape() as tape:
-            augmented = data_aug_layer(img_array, training=False)
-            preprocessed = tf.keras.applications.efficientnet.preprocess_input(augmented)
-
-            conv_outputs = base_model(preprocessed, training=False)
-            tape.watch(conv_outputs)
-
-            x = conv_outputs
-            for layer in classifier_layers:
-                x = layer(x)
-
-            preds = x
-
-            if pred_index is None:
-                pred_index = tf.argmax(preds[0])
-
-            loss = preds[:, pred_index]
-
-        # 4. Grad-CAM math
         grads = tape.gradient(loss, conv_outputs)
         pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
@@ -173,6 +121,7 @@ def create_app():
             img = Image.open(img_path).convert("L").resize((w, h))
             x = np.array(img).astype("float32") / 255.0
             x = np.expand_dims(x, axis=-1)
+
         else:
             img = Image.open(img_path).convert("RGB").resize((w, h))
             x = np.array(img).astype("float32")
@@ -305,12 +254,7 @@ def create_app():
         preds = model.predict(x)
         idx = int(np.argmax(preds[0]))
 
-        if model_name == "densenet":
-            heatmap = make_gradcam_heatmap_densenet(x, model, idx)
-        elif model_name == "efficientnet":
-            heatmap = make_gradcam_heatmap(x, model, "efficientnetb4", idx)
-        else:
-            heatmap = None
+        heatmap = make_gradcam_heatmap(x, model, idx)
 
         result_name = f"gradcam_{filename}"
         result_path = os.path.join(RESULT_FOLDER, result_name)
