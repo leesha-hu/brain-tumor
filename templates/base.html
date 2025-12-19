@@ -3,232 +3,145 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}TumorVision - Brain Tumor Detection System{% endblock %}</title>
+  <title>{% block title %}TumorVision{% endblock %}</title>
 
   <style>
     :root {
-      --primary-color: #4E89AE;
-      --accent-color: #F6C667;
-      --light-bg: #EAF4F4;
-      --dark-text: #1F1F1F;
-      --footer-bg: #1F3A5F;
+      --bg-main: linear-gradient(135deg, #215472, #e6f2f2);
+      --accent: #20c0a0ff;
+      --card-bg: #ffffff;
+      --muted-text: #1f2933;
+      --border-light: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-image: url("{{ url_for('static', filename='images/basic.jpeg') }}");
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
-      margin: 0;
-      padding: 0;
+      background: var(--bg-main);
+      min-height: 100vh;
     }
 
-    /* ---------------- ORIGINAL HEADER EXACTLY ---------------- */
-    header {
-      background-color: var(--light-bg);
+    /* ================= TOP BAR ================= */
+    .top-bar {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 15px 40px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      height: 100px;
-      position: relative;
+      justify-content: flex-end;
+      padding: 20px 40px;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-    }
-
-    .header-left img {
-      height: 80px;
-      width: auto;
-      margin-right: 10px;
-    }
-
-    .header-title {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 24px;
-      font-weight: bold;
-      color: var(--primary-color);
-      white-space: nowrap;
-    }
-
-    .header-buttons a {
-      margin-left: 15px;
-      padding: 10px 20px;
+    .top-bar a {
+      background: var(--accent);
+      color: #003b35;
+      padding: 10px 22px;
+      border-radius: 8px;
       text-decoration: none;
-      background-color: var(--primary-color);
-      color: white;
-      border-radius: 5px;
-      transition: background-color 0.3s ease;
-    }
-
-    .header-buttons a:hover {
-      background-color: #3a6f93;
-    }
-
-    /* ------------ SAME REST OF STYLING YOU ALREADY APPROVED ------------ */
-
-    .page-container {
-      padding: 40px 20px;
-      min-height: calc(100vh - 160px);
-    }
-
-    .container {
-      padding: 40px 20px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .combined-box {
-      display: flex;
-      flex-wrap: wrap;
-      background: white;
-      max-width: 1000px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-      padding: 30px;
-      gap: 30px;
-    }
-
-    .text-section {
-      flex: 1;
-      min-width: 300px;
-    }
-
-    .text-section h2 {
-      color: #333;
-      margin-bottom: 15px;
-    }
-
-    .text-section p {
-      color: #444;
-      line-height: 1.6;
-      font-size: 16px;
-    }
-
-    .image-section {
-      flex: 1;
-      text-align: center;
-      min-width: 250px;
-    }
-
-    .image-section img {
-      background-color: #1F1F1F;
-      height: 400px;
-      max-width: 100%;
-      max-height: 500px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.05);
-    }
-
-    .features-section {
-      background: #f0f0f0;
-      padding: 60px 20px;
-      text-align: center;
-    }
-
-    .features-section h2 {
-      color: #333;
-      margin-bottom: 40px;
-    }
-
-    .features {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 30px;
-    }
-
-    .feature-box {
-      background: white;
-      padding: 25px;
-      width: 300px;
-      border-radius: 10px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.08);
-    }
-
-    .feature-box h3 {
-      color: var(--primary-color);
-      margin-bottom: 10px;
-    }
-
-    .feature-box p {
-      color: #555;
       font-size: 15px;
-      line-height: 1.5;
+      font-weight: 600;
+      margin-left: 10px;
+      transition: background 0.3s, transform 0.2s;
     }
 
-    footer {
-      background-color: var(--footer-bg);
-      color: white;
-      text-align: center;
-      padding: 15px;
-      margin-top: 50px;
+    .top-bar a:hover {
+      background: #139279ff;
+      transform: translateY(-1px);
     }
+
+    /* ================= PAGE HEADING (GLOBAL) ================= */
+    .page-heading {
+      max-width: 1200px;
+      margin: 30px auto 40px;
+      padding: 0 40px;
+    }
+
+    .page-heading h1 {
+      font-size: 36px;
+      font-weight: 700;
+      color: #000000;
+    }
+
+    .page-heading p {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #1f2933;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    /* ================= FLASH ================= */
     .flash-container {
-    max-width: 900px;
-    margin: 20px auto;
-    padding: 0 20px;
-}
+      max-width: 1000px;
+      margin: 10px auto 0;
+      padding: 0 30px;
+    }
 
-.flash {
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    font-weight: 600;
-    position: relative;
-}
+    .flash {
+      background: white;
+      padding: 14px 16px;
+      border-left: 5px solid var(--accent);
+      margin-bottom: 10px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: #000;
+    }
 
-.flash-close {
-    position: absolute;
-    right: 10px;
-    top: 8px;
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-}
+    .flash-close {
+      float: right;
+      border: none;
+      background: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
 
-.flash-success { background: #e6f6ef; color: #0b6b34; border: 1px solid #bfe5cc; }
-.flash-danger { background: #ffecec; color: #a51212; border: 1px solid #ffbcbc; }
-.flash-warning { background: #fff5da; color: #8a6d00; border: 1px solid #ffebad; }
-.flash-info { background: #e8f1ff; color: #1a4fa3; border: 1px solid #cfe1ff; }
+    /* ================= MAIN CONTENT ================= */
+    .page-content {
+      max-width: 1200px;
+      margin: 0 auto 100px;
+      padding: 0 40px;
+    }
 
+    /* ================= FOOTER ================= */
+    footer {
+      padding: 28px;
+      text-align: center;
+      font-size: 16px;
+      color: #000000;
+      font-weight: 500;
+    }
   </style>
+
+  {% block extra_css %}{% endblock %}
 </head>
 
 <body>
 
-  <!-- Header -->
-  <header>
-    <div class="header-left">
-      <img src="{{ url_for('static', filename='major-logo.png') }}" alt="Brain Icon">
-    </div>
-
-    <div class="header-title">TumorVision - Brain Tumor Diagnosis Assistant</div>
-
-   <div class="header-buttons">
-    {% block header_buttons %}
-        {% if current_user.is_authenticated %}
-            <a href="{{ url_for('logout') }}">Logout</a>
-        {% else %}
-            <a href="{{ url_for('login') }}">Login</a>
-            <a href="{{ url_for('register') }}">Sign Up</a>
-        {% endif %}
-    {% endblock %}
+<!-- TOP RIGHT ACTIONS -->
+<div class="top-bar">
+  {% if not current_user.is_authenticated %}
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}">Sign Up</a>
+  {% else %}
+    <a href="{{ url_for('logout') }}">Logout</a>
+  {% endif %}
 </div>
 
-  </header>
+<!-- PAGE HEADING -->
+{% block page_heading %}
+<div class="page-heading">
+  <h1>{% block page_title %}{% endblock %}</h1>
+  <p>{% block page_subtitle %}{% endblock %}</p>
+</div>
+{% endblock %}
+
+<!-- FLASH MESSAGES -->
 <div class="flash-container">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, msg in messages %}
-        <div class="flash flash-{{ category }}">
+        <div class="flash">
           {{ msg }}
           <button class="flash-close" onclick="this.parentElement.style.display='none'">✕</button>
         </div>
@@ -236,13 +149,16 @@
     {% endif %}
   {% endwith %}
 </div>
-  <div class="page-container">
-    {% block content %}{% endblock %}
-  </div>
 
-  <footer>
-    &copy; 2025 TumorVision | All rights reserved.
-  </footer>
+<!-- PAGE CONTENT -->
+<div class="page-content">
+  {% block content %}{% endblock %}
+</div>
 
+<footer>
+  © 2025 TumorVision | Brain Tumor Detection System
+</footer>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>

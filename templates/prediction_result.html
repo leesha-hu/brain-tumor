@@ -1,31 +1,170 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Prediction Result | TumorVision</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-{% block header_buttons %}
-  <a href="{{ url_for('patient_dashboard') }}" class="btn-secondary">Back to Dashboard</a>
-  <a href="{{ url_for('logout') }}" class="btn-secondary">Logout</a>
-{% endblock %}
+  <style>
+    :root {
+      --header-bg: linear-gradient(135deg, #215472, #e6f2f2);
+      --accent-green: #20c0a0ff;
+    }
 
-{% block title %}Prediction Result{% endblock %}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
 
-{% block content %}
-<h2>Prediction Result</h2>
+    body {
+      min-height: 100vh;
+      background: #ffffff; /* white body */
+      color: #000000;
+    }
 
-<div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
-  <div>
-    <h4>Original</h4>
-    <img src="{{ orig_url }}" alt="original" style="max-width:420px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
+    /* ================= HEADER ================= */
+    .header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 36px 40px;
+      background: var(--header-bg);
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #131212;
+    }
+
+    .header-center {
+      font-size: 20px;
+      font-weight: 700;
+      color: #131212;
+      text-align: center;
+      position:relative;
+      right:18px;
+    }
+
+    .header-action a {
+      background: var(--accent-green);
+      color: #003b35;
+      padding: 10px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .header-action a:hover {
+      background: #139279ff;
+    }
+
+    /* ================= MAIN CONTENT ================= */
+    .result-container {
+      max-width: 1100px;
+      margin: 50px auto;
+      padding: 0 30px;
+    }
+
+    .result-summary {
+      background: #f8fafc;
+      border-left: 6px solid var(--accent-green);
+      padding: 22px 26px;
+      border-radius: 8px;
+      margin-bottom: 40px;
+    }
+
+    .result-summary h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .result-summary p {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ================= IMAGES ================= */
+    .images-section {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .image-card {
+      text-align: center;
+    }
+
+    .image-card h4 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .image-card img {
+      max-width: 420px;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .no-heatmap {
+      font-size: 15px;
+      color: #444;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-title">TumorVision</div>
+
+    <div class="header-center">Prediction Result</div>
+
+    <div class="header-action">
+      <a href="{{ url_for('patient_dashboard') if current_user.role == 'patient' else url_for('doctor_dashboard') }}">
+        Back to Dashboard
+      </a>
+      
+    </div>
   </div>
 
-  <div>
-    <h4>Grad-CAM Overlay</h4>
-    {% if result_url %}
-      <img src="{{ result_url }}" alt="gradcam" style="max-width:420px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
-    {% else %}
-      <p>Heatmap not generated.</p>
-    {% endif %}
-  </div>
-</div>
+  <!-- MAIN CONTENT -->
+  <div class="result-container">
 
-<p style="margin-top:18px"><strong>Prediction:</strong> {{ label }} ({{ confidence }}%)</p>
-<a href="{{ url_for('patient_dashboard') }}" class="btn-secondary">Back to Dashboard</a>
-{% endblock %}
+    <!-- RESULT SUMMARY AT TOP -->
+    <div class="result-summary">
+      <h2>Detection Outcome</h2>
+      <p>
+        <strong>Prediction:</strong> {{ label }} &nbsp;|&nbsp;
+        <strong>Confidence:</strong> {{ confidence }}%
+      </p>
+    </div>
+
+    <!-- IMAGES -->
+    <div class="images-section">
+
+      <div class="image-card">
+        <h4>Original MRI Scan</h4>
+        <img src="{{ orig_url }}" alt="Original MRI">
+      </div>
+
+      <div class="image-card">
+        <h4>Grad-CAM Visualization</h4>
+        {% if result_url %}
+          <img src="{{ result_url }}" alt="Grad-CAM Heatmap">
+        {% else %}
+          <p class="no-heatmap">Heatmap not generated.</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

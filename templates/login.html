@@ -1,43 +1,186 @@
 {% extends "base.html" %}
 
-{% block header_buttons %}
-  <a href="{{ url_for('home') }}" class="btn-secondary">Back to Home</a>
-{% endblock %}
+{% block title %}Login | TumorVision{% endblock %}
 
-{% block title %}Login - TumorVision{% endblock %}
+{% block page_heading %}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+
+<style>
+  /* ===== HIDE BASE TOP BAR BUTTONS ONLY ON LOGIN ===== */
+  .top-bar a {
+    display: none;
+  }
+
+  /* ===== BACK TO HOME BUTTON ===== */
+  .back-home {
+    position: absolute;
+    top: 22px;
+    right: 40px;
+    background: #20c0a0ff;
+    color: #003b35;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .back-home:hover {
+    background: #139279ff;
+  }
+
+  /* ===== CENTER LOGIN CARD ===== */
+  .auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 75vh;
+  }
+
+  .auth-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 420px;
+    padding: 34px 30px;
+    border-radius: 16px;
+    box-shadow: 0 25px 45px rgba(0,0,0,0.18);
+    text-align: center;
+  }
+
+  /* ===== HEADING ===== */
+  .auth-card h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+
+  .auth-card .subtitle {
+    font-size: 16px;           /* INCREASED SIZE */
+    color: #374151;
+    margin-bottom: 22px;
+  }
+
+  /* ===== FORM ===== */
+  .form-label {
+    display: block;
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1f2933;
+    margin-bottom: 12px;
+  }
+
+  .form-input,
+  .form-select {
+    width: 100%;
+    margin-top: 5px;
+    padding: 11px 12px;
+    font-size: 14.5px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+  }
+
+  .form-input:focus,
+  .form-select:focus {
+    border-color: #20c0a0ff;
+    box-shadow: 0 0 0 2px rgba(32,192,160,0.25);
+    outline: none;
+  }
+
+  /* ===== LOGIN BUTTON ===== */
+  .auth-btn {
+    width: 100%;
+    margin-top: 18px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #20c0a0ff;
+    color: #003b35;
+  }
+
+  .auth-btn:hover:not(:disabled) {
+    background: #139279ff;
+  }
+
+  .auth-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .auth-foot {
+    margin-top: 16px;
+    font-size: 13.5px;
+    color: #1f2933;
+  }
+
+  .auth-foot a {
+    color: #20c0a0ff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+</style>
+
+<!-- BACK TO HOME -->
+<a href="{{ url_for('home') }}" class="back-home">← Back to Home</a>
 
 <div class="auth-wrapper">
   <div class="auth-card">
-    <h2 class="auth-title">Login</h2>
 
-    <form method="POST" class="form" id="login-form" novalidate>
-      <label class="form-label">Username or Email
-        <input name="username_or_email" required class="form-input"
-               value="{{ request.form.get('username_or_email', '') }}" />
+    <h1>Login</h1>
+    <div class="subtitle">Access your TumorVision account</div>
+
+    <form method="POST" id="login-form" novalidate>
+
+      <label class="form-label">
+        Username or Email
+        <input
+          name="username_or_email"
+          required
+          class="form-input"
+          value="{{ request.form.get('username_or_email', '') }}"
+        />
       </label>
 
-      <label class="form-label">Password
-        <input type="password" name="password" required class="form-input" />
+      <label class="form-label">
+        Password
+        <input
+          type="password"
+          name="password"
+          required
+          class="form-input"
+        />
       </label>
 
-      <label class="form-label">Login as
+      <label class="form-label">
+        Login as
         <select name="role" id="login-role" required class="form-select">
           <option value="" disabled selected>Select Role</option>
-          <option value="patient" {% if request.form.get('role') == 'patient' %}selected{% endif %}>Patient</option>
-          <option value="doctor" {% if request.form.get('role') == 'doctor' %}selected{% endif %}>Doctor</option>
+          <option value="patient"
+            {% if request.form.get('role') == 'patient' %}selected{% endif %}>
+            Patient
+          </option>
+          <option value="doctor"
+            {% if request.form.get('role') == 'doctor' %}selected{% endif %}>
+            Doctor
+          </option>
         </select>
       </label>
 
-      <button type="submit" class="auth-btn" id="login-submit" disabled>Login</button>
+      <button type="submit" class="auth-btn" id="login-submit" disabled>
+        Login
+      </button>
     </form>
 
-    <p class="auth-foot">
-      Don't have an account?
+    <div class="auth-foot">
+      Don’t have an account?
       <a href="{{ url_for('register') }}">Register here</a>
-    </p>
+    </div>
+
   </div>
 </div>
 
@@ -45,22 +188,14 @@
 (function(){
   const roleSelect = document.getElementById('login-role');
   const submitBtn = document.getElementById('login-submit');
-  const form = document.getElementById('login-form');
 
   function updateSubmitState() {
-    submitBtn.disabled = (!roleSelect.value || roleSelect.value === '');
+    submitBtn.disabled = !roleSelect.value;
   }
 
   document.addEventListener('DOMContentLoaded', updateSubmitState);
   roleSelect.addEventListener('change', updateSubmitState);
-
-  form.addEventListener('submit', function(e) {
-    if (!roleSelect.value) {
-      alert('Please select your role before logging in.');
-      e.preventDefault();
-      return;
-    }
-  });
 })();
 </script>
+
 {% endblock %}

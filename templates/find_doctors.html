@@ -1,15 +1,202 @@
-{% extends "base.html" %}
-{% block title %}Find Doctors{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Find Doctors | TumorVision</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-{% block content %}
-<h2>Available Doctors</h2>
+  <style>
+    :root {
+      --header-bg: linear-gradient(135deg, #215472, #e6f2f2);
+      --accent-green: #20c0a0ff;
+      --card-bg: #e9f4ff;
+    }
 
-<ul class="doctor-list">
-  {% for d in doctors %}
-    <li>
-      {{ d.username }}
-      <a href="{{ url_for('chat', peer_id=d.id) }}">Chat</a>
-    </li>
-  {% endfor %}
-</ul>
-{% endblock %}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    body {
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    /* ================= HEADER ================= */
+    .header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 36px 40px;
+      background: var(--header-bg);
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #131212;
+    }
+
+    .header-center {
+      font-size: 20px;
+      font-weight: 700;
+      color: #131212;
+      text-align: center;
+      position:relative;
+      right:18px;
+    }
+
+
+    .header-action a {
+      background: var(--accent-green);
+      color: #003b35;
+      padding: 10px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .header-action a:hover {
+      background: #139279ff;
+    }
+
+    /* ================= MAIN WRAPPER ================= */
+    .main-wrapper {
+      background:#ffffff;
+      padding: 70px 40px;
+    }
+
+    .page-info {
+      max-width: 900px;
+      margin: 0 auto 50px;
+      text-align: center;
+      color: #000000;
+    }
+
+    .page-info h2 {
+      font-size: 26px;
+      margin-bottom: 14px;
+      font-weight: 700;
+    }
+
+    .page-info p {
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    /* ================= DOCTOR CARDS ================= */
+    .doctors-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+      /* background-color:blue; */
+    }
+
+    .doctor-card {
+      width: 300px;
+      background: var(--header-bg);
+      border-radius: 18px;
+      padding: 26px 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #000000;
+    }
+
+    .doctor-card h3 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .doctor-card p {
+      font-size: 15.5px;
+      margin-bottom: 8px;
+    }
+
+    .doctor-card span {
+      font-weight: 600;
+    }
+
+    .chat-btn {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .chat-btn a {
+      display: inline-block;
+      background: var(--accent-green);
+      color: #003b35;
+      padding: 10px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14.5px;
+      font-weight: 600;
+    }
+
+    .chat-btn a:hover {
+      background: #139279ff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-title">TumorVision</div>
+
+    <div class="header-center">Find Doctors</div>
+
+    <div class="header-action">
+      <a href="{{ url_for('patient_dashboard') if current_user.role == 'patient'
+                else url_for('doctor_dashboard') }}">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-wrapper">
+
+    <!-- PAGE DESCRIPTION -->
+    <div class="page-info">
+      <h2>Connect with Medical Experts</h2>
+      <p>
+        You can browse through the list of available doctors and directly message them
+        to discuss your MRI scan results, symptoms, and get professional guidance.
+        Our chat feature allows secure and private communication between patients and doctors.
+      </p>
+    </div>
+
+    <!-- DOCTOR LIST -->
+    <div class="doctors-container">
+
+      {% for doctor in doctors %}
+      <div class="doctor-card">
+        <div>
+          <h3>Dr. {{ doctor.username }}</h3>
+          <p><span>Hospital:</span> {{ doctor.hospital }}</p>
+          <p><span>Experience:</span>{{ doctor.experience_years }} years</p>
+        </div>
+
+        <div class="chat-btn">
+          <a href="{{ url_for('chat', peer_id=doctor.id) }}">Chat</a>
+        </div>
+      </div>
+      {% else %}
+        <p>No doctors available at the moment.</p>
+      {% endfor %}
+
+    </div>
+  </div>
+
+</body>
+</html>

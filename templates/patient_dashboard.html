@@ -1,46 +1,232 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard | TumorVision</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-{% block title %}Dashboard - TumorVision{% endblock %}
+  <style>
+    :root {
+  --home-bg: linear-gradient(135deg, #215472, #e6f2f2);
+  --accent-green: #20c0a0ff;
+  --text-dark: #0f172a;
+}
 
-{% block content %}
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+body {
+  min-height: 100vh;
+  
+}
 
-<!-- Secondary dashboard nav -->
-<div class="dashboard-nav">
-  <a href="{{ url_for('profile') }}">Profile</a>
-  <a href="{{ url_for('tips') }}">Tips</a>
-  <a href="{{ url_for('chats') }}">Chats</a>
-  <a href="{{ url_for('find_doctors') }}">Find Doctors</a>
-    
-</div>
+.header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 36px 40px;
+  background: var(--home-bg);
+}
 
-<h2>Welcome, {{ current_user.username }}</h2>
+.header-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #131212ff;
+  justify-self: start;
+}
 
-<div class="predict-card">
-  <h3>Brain Tumor Prediction</h3>
+.header-welcome {
+  font-size: 20px;
+  font-weight: 700;
+  color: #131212ff;
+  justify-self: center;   /* ✅ EXACT CENTER */
+  text-align: center;
+}
 
-  <form action="{{ url_for('upload_predict') }}"
-        method="post"
-        enctype="multipart/form-data">
+.header-logout {
+  justify-self: end;
+}
 
-    <label>Select Model</label>
-    <select name="model_name" required>
-      <option value="" disabled selected>Select Model</option>
-      <option value="xception">Xception</option>
-      <option value="resnet">ResNet50</option>
-      <option value="densenet">DenseNet121</option>
-      <option value="efficientnet">EfficientNet</option>
-    </select>
+.header-logout a {
+  background: var(--accent-green);
+  color: #003b35;
+  padding: 10px 22px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+}
 
-    <label>Upload MRI Image</label>
-    <input type="file"
-           name="image"
-           accept="image/png, image/jpeg"
-           required>
+/* ================= NAV BAR ================= */
+.nav-bar {
+  width: 100%;
+  background: var(--home-bg);
 
-    <button type="submit">Upload & Predict</button>
-  </form>
-</div>
+  display: flex;
+  justify-content:space-evenly;
+  margin: 0;
+  padding: 0;
 
-{% endblock %}
+  /* ✅ OUTER BORDER */
+  border-top: 2px solid black;
+  border-bottom: 2px solid black;
+}
+
+
+.nav-bar a {
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+  color: black;
+    padding: 8px 18px;
+
+  /* ✅ ADD THESE */
+  /* border: 2px solid rgba(20, 20, 20, 0.15);   light black border */
+  box-sizing: border-box;
+}
+
+
+.nav-bar a:hover {
+  color: #135f58ff;
+}
+
+/* ================= CONTENT ================= */
+.content {
+  max-width: 900px;
+  margin: 40px auto 50px;
+  text-align: center;
+  color: var(--text-dark);
+  padding: 0 20px;
+}
+
+.content p {
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+/* ================= FORM ================= */
+.form-wrapper {
+  max-width: 480px;
+  margin: 0 auto 60px;
+  background: var(--home-bg);      /* same as header */
+  padding: 36px 32px;
+  border-radius: 18px;
+  box-shadow: 0 30px 55px rgba(0,0,0,0.22);
+}
+
+.form-wrapper h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 22px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.form-wrapper label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+
+.form-wrapper select,
+.form-wrapper input[type="file"] {
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 14.5px;
+  border-radius: 8px;
+  border: 1px solid #5c5d5fff;
+}
+
+.form-wrapper select:focus,
+.form-wrapper input:focus {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 2px rgba(32,192,160,0.25);
+  outline: none;
+}
+
+.form-wrapper button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: var(--accent-green);
+  color: #003b35;
+}
+
+.form-wrapper button:hover {
+  background: #139279ff;
+}
+
+
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-title">TumorVision</div>
+    <div class="header-welcome">Welcome, {{ current_user.username }}</div>
+    <div class="header-logout">
+      <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+  </div>
+
+  <!-- NAV BAR -->
+  <div class="nav-bar">
+    <a href="{{ url_for('profile') }}">Profile</a>
+    <a href="{{ url_for('tips') }}">Tips</a>
+    <a href="{{ url_for('chats') }}">Chats</a>
+    <a href="{{ url_for('find_doctors') }}">Find Doctors</a>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <p>
+      You can upload the MRI scan image below to know whether a brain tumor
+      is present or not. If a tumor is detected, the system will also
+      identify the type of tumor to assist accurate medical decisions.
+    </p>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-wrapper">
+    <h3>Upload MRI Scan</h3>
+
+    <form action="{{ url_for('upload_predict') }}"
+          method="post"
+          enctype="multipart/form-data">
+
+      <label>Select Model</label>
+      <select name="model_name" required>
+        <option value="" disabled selected>Select Model</option>
+        <option value="xception">Xception</option>
+        <option value="resnet">ResNet50</option>
+        <option value="densenet">DenseNet121</option>
+        <option value="efficientnet">EfficientNet</option>
+      </select>
+
+      <label>Upload MRI Image</label>
+      <input type="file"
+             name="image"
+             accept="image/png, image/jpeg"
+             required>
+
+      <button type="submit">Upload & Predict</button>
+    </form>
+  </div>
+
+</body>
+</html>

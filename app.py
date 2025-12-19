@@ -10,7 +10,7 @@ from PIL import Image
 import numpy as np
 import tensorflow as tf
 import cv2
-
+from sqlalchemy import or_, and_, desc
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.applications.efficientnet import preprocess_input as eff_preprocess
 
@@ -58,7 +58,7 @@ def create_app():
         "efficientnet": load_model_from_folder(os.path.join(MODEL_FOLDER, "efficient")),
     }
 
-    CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"] 
+    CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"]
 
     # -------------------------------------------------
     # GRAD-CAM
@@ -99,11 +99,9 @@ def create_app():
         return heatmap.numpy()
 
     def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
-        # 1. Get layers
         data_aug_layer = model.get_layer("sequential_1")
         base_model = model.get_layer(last_conv_layer_name)
 
-        # 2. Collect classifier layers (after EfficientNet)
         classifier_layers = []
         found = False
         for layer in model.layers:
@@ -121,7 +119,6 @@ def create_app():
                 ):
                     classifier_layers.append(layer)
 
-        # 3. Gradient computation
         with tf.GradientTape() as tape:
             augmented = data_aug_layer(img_array, training=False)
             preprocessed = tf.keras.applications.efficientnet.preprocess_input(augmented)
@@ -140,7 +137,6 @@ def create_app():
 
             loss = preds[:, pred_index]
 
-        # 4. Grad-CAM math
         grads = tape.gradient(loss, conv_outputs)
         pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
@@ -197,12 +193,21 @@ def create_app():
     @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
+            if User.query.filter_by(email=request.form["email"]).first():
+
+               flash("Email already registered. Please login.", "danger")
+               return redirect(url_for("register"))
             user = User(
                 username=request.form["username"],
                 email=request.form["email"],
                 role=request.form["role"],
             )
+
             user.set_password(request.form["password"])
+            if request.form["role"] == "doctor":
+            
+                user.hospital = request.form.get("hospital")
+                user.experience_years = int(request.form.get("experience_years", 0))
             db.session.add(user)
             db.session.commit()
             flash("Registration successful", "success")
@@ -262,6 +267,18 @@ def create_app():
             ],
         )
 
+    @app.route("/send_message/<int:peer_id>", methods=["POST"])
+    @login_required
+    def send_message(peer_id):
+        msg = Message(
+            sender_id=current_user.id,
+            receiver_id=peer_id,
+            content=request.form["content"],
+        )
+        db.session.add(msg)
+        db.session.commit()
+        return redirect(url_for("chat", peer_id=peer_id))
+
     @app.route("/profile")
     @login_required
     def profile():
@@ -270,19 +287,45 @@ def create_app():
     @app.route("/chats")
     @login_required
     def chats():
-        if current_user.role == "patient":
-            peers = User.query.filter_by(role="doctor").all()
-        else:
-            peers = User.query.filter_by(role="patient").all()
-        return render_template("chats.html", peers=peers)
+        msgs = Message.query.filter(
+            or_(
+                Message.sender_id == current_user.id,
+                Message.receiver_id == current_user.id,
+            )
+        ).order_by(Message.timestamp.desc()).all()
+
+        chat_map = {}
+        for msg in msgs:
+            peer_id = (
+                msg.receiver_id
+                if msg.sender_id == current_user.id
+                else msg.sender_id
+            )
+            if peer_id not in chat_map:
+                chat_map[peer_id] = msg
+
+        chats = []
+        for peer_id, last_msg in chat_map.items():
+            peer = User.query.get(peer_id)
+            chats.append({"peer": peer, "last_message": last_msg})
+
+        return render_template("chats.html", chats=chats)
 
     @app.route("/chat/<int:peer_id>")
     @login_required
     def chat(peer_id):
         peer = User.query.get_or_404(peer_id)
         messages = Message.query.filter(
-            ((Message.sender_id == current_user.id) & (Message.receiver_id == peer_id)) |
-            ((Message.sender_id == peer_id) & (Message.receiver_id == current_user.id))
+            or_(
+                and_(
+                    Message.sender_id == current_user.id,
+                    Message.receiver_id == peer_id,
+                ),
+                and_(
+                    Message.sender_id == peer_id,
+                    Message.receiver_id == current_user.id,
+                ),
+            )
         ).order_by(Message.timestamp.asc()).all()
 
         return render_template("chat.html", peer=peer, messages=messages)

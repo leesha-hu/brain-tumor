@@ -1,82 +1,254 @@
 {% extends "base.html" %}
 
-{% block header_buttons %}
-  <a href="{{ url_for('home') }}" class="btn-secondary">Back to Home</a>
-{% endblock %}
+{% block title %}Register | TumorVision{% endblock %}
 
-{% block title %}Register - TumorVision{% endblock %}
+{% block page_heading %}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
+
+<style>
+  /* ===== HIDE BASE TOP BUTTONS ===== */
+  .top-bar a {
+    display: none;
+  }
+
+  /* ===== BACK TO HOME BUTTON ===== */
+  .back-home {
+    position: absolute;
+    top: 22px;
+    right: 40px;
+    background: #20c0a0ff;
+    color: #003b35;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .back-home:hover {
+    background: #139279ff;
+  }
+
+  /* ===== CENTER CARD ===== */
+  .auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 78vh;
+  }
+
+  .auth-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 440px;
+    padding: 34px 30px;
+    border-radius: 16px;
+    box-shadow: 0 25px 45px rgba(0,0,0,0.18);
+    text-align: center;
+  }
+
+  /* ===== TITLES ===== */
+  .auth-card h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 6px;
+  }
+
+  .auth-card .subtitle {
+    font-size: 16px;
+    color: #374151;
+    margin-bottom: 22px;
+  }
+
+  /* ===== FORM ===== */
+  .form-label {
+    display: block;
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1f2933;
+    margin-bottom: 12px;
+  }
+
+  .form-input,
+  .form-select {
+    width: 100%;
+    margin-top: 5px;
+    padding: 11px 12px;
+    font-size: 14.5px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+  }
+
+  .form-input:focus,
+  .form-select:focus {
+    border-color: #20c0a0ff;
+    box-shadow: 0 0 0 2px rgba(32,192,160,0.25);
+    outline: none;
+  }
+
+  /* ===== REGISTER BUTTON ===== */
+  .auth-btn {
+    width: 100%;
+    margin-top: 18px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #20c0a0ff;
+    color: #003b35;
+  }
+
+  .auth-btn:hover {
+    background: #139279ff;
+  }
+
+  /* ===== FOOT LINK ===== */
+  .auth-foot {
+    margin-top: 16px;
+    font-size: 13.5px;
+    color: #1f2933;
+  }
+
+  .auth-foot a {
+    color: #20c0a0ff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .auth-foot a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<!-- BACK TO HOME -->
+<a href="{{ url_for('home') }}" class="back-home">← Back to Home</a>
 
 <div class="auth-wrapper">
   <div class="auth-card">
-    <h2 class="auth-title">Register</h2>
+
+    <h1>Register</h1>
+    <div class="subtitle">Create your TumorVision account</div>
 
     <form method="POST" class="form" id="register-form" novalidate>
 
-      <label class="form-label">Username
+      <label class="form-label">
+        Username
         <input name="username" required class="form-input" />
       </label>
 
-      <label class="form-label">Email
+      <label class="form-label">
+        Email
         <input type="email" name="email" required class="form-input" />
       </label>
 
-      <label class="form-label">Password
+      <label class="form-label">
+        Password
         <input type="password" name="password" required class="form-input" />
       </label>
 
-      <label class="form-label">Register as
-  <select name="role" id="role-select" required class="form-select">
-      <option value="" disabled selected>Select Role</option>
-      <option value="patient">Patient</option>
-      <option value="doctor">Doctor</option>
-  </select>
-</label>
-
-
-      <!-- hospital appears only when doctor is selected -->
-      <label class="form-label" id="hospital-row" style="display:none;">
-        Hospital / Clinic Name
-        <input type="text" name="hospital" id="hospital-input" class="form-input" />
+      <label class="form-label">
+        Register as
+        <select name="role" id="role-select" required class="form-select">
+          <option value="" disabled selected>Select Role</option>
+          <option value="patient">Patient</option>
+          <option value="doctor">Doctor</option>
+        </select>
       </label>
 
-      <button type="submit" class="auth-btn">Register</button>
+      <!-- Hospital field (doctor only) -->
+      <label class="form-label" id="hospital-row" style="display:none;">
+        Hospital / Clinic Name
+        <input
+          type="text"
+          name="hospital"
+          id="hospital-input"
+          class="form-input"
+        />
+      </label>
+
+      <!-- ✅ Experience field (doctor only) -->
+      <label class="form-label" id="experience-row" style="display:none;">
+        Years of Experience
+        <input
+          type="number"
+          name="experience_years"
+          id="experience-input"
+          class="form-input"
+          min="0"
+        />
+      </label>
+
+      <button type="submit" class="auth-btn">
+        Register
+      </button>
     </form>
 
-    <p class="auth-foot">
+    <div class="auth-foot">
       Already have an account?
       <a href="{{ url_for('login') }}">Login here</a>
-    </p>
+    </div>
 
   </div>
 </div>
 
 <script>
   const roleSelect = document.getElementById("role-select");
+
   const hospitalRow = document.getElementById("hospital-row");
   const hospitalInput = document.getElementById("hospital-input");
+
+  const experienceRow = document.getElementById("experience-row");
+  const experienceInput = document.getElementById("experience-input");
+
+  const form = document.getElementById("register-form");
 
   roleSelect.addEventListener("change", function () {
     if (this.value === "doctor") {
       hospitalRow.style.display = "block";
-      hospitalInput.setAttribute("required", "required");
+      experienceRow.style.display = "block";
+
+      hospitalInput.required = true;
+      experienceInput.required = true;
     } else {
       hospitalRow.style.display = "none";
-      hospitalInput.removeAttribute("required");
+      experienceRow.style.display = "none";
+
+      hospitalInput.required = false;
+      experienceInput.required = false;
+
       hospitalInput.value = "";
+      experienceInput.value = "";
     }
   });
-  document.getElementById("register-form").addEventListener("submit", function (e) {
-    const role = document.getElementById("role-select").value;
 
-    if (role === "") {
-        alert("Please select a role before registering.");
-        e.preventDefault();
-        return false;
+  form.addEventListener("submit", function (e) {
+    const username = form.querySelector('input[name="username"]').value.trim();
+    const email = form.querySelector('input[name="email"]').value.trim();
+    const password = form.querySelector('input[name="password"]').value.trim();
+    const role = roleSelect.value;
+
+    // 🔴 Common validation
+    if (!username || !email || !password || !role) {
+      alert("Please fill in all required fields.");
+      e.preventDefault();
+      return;
     }
-});
+
+    // 🔴 Doctor-specific validation
+    if (role === "doctor") {
+      if (!hospitalInput.value.trim() || !experienceInput.value.trim()) {
+        alert("Please fill Hospital name and Years of Experience.");
+        e.preventDefault();
+        return;
+      }
+    }
+  });
 </script>
+
 
 {% endblock %}

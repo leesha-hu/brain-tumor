@@ -3,265 +3,262 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TumorVision - Brain Tumor Detection System</title>
+  <title>TumorVision – Brain Tumor Detection</title>
 
   <style>
     :root {
-      --primary-color: #4E89AE;
-      --accent-color: #F6C667;
-      --light-bg: #EAF4F4;
-      --dark-text: #1F1F1F;
-      --footer-bg: #1F3A5F;
+      --bg-main: linear-gradient(135deg, #215472, #e6f2f2);
+      --primary-text: #ffffff;
+      --muted-text: #1f2933;
+      --accent: #1edbb5ff;   /* SAME AS AI IN HEALTHCARE */
+      --card-bg: #ffffff;
+      --border-light: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-image: url("../static/images/basic.jpeg");
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
-      margin: 0;
-      padding: 0;
+      background: var(--bg-main);
+      color: var(--primary-text);
     }
 
-    header {
-      background-color: var(--light-bg);
+    /* ================= TOP BAR (NEW, NOT FIXED) ================= */
+    .top-bar {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 15px 40px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      height: 100px;
+      justify-content: flex-end;
+      padding: 20px 40px;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-    }
-
-    .header-left img {
-      width: 40px;
-      height: 40px;
-      margin-right: 15px;
-    }
-
-    .header-title {
-      flex: 1;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      color: var(--primary-color);
-    }
-
-    .header-buttons a {
-      margin-left: 15px;
-      padding: 10px 20px;
+    .top-bar a {
+      background:  #20c0a0ff;
+      color: #003b35;
+      padding: 10px 22px;
+      border-radius: 8px;
       text-decoration: none;
-      background-color: var(--primary-color);
-      color: white;
-      border-radius: 5px;
-      transition: background-color 0.3s ease;
-    }
-
-    .header-buttons a:hover {
-      background-color: #3a6f93;
-    }
-
-    .container {
-      padding: 40px 20px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .combined-box {
-      display: flex;
-      flex-wrap: wrap;
-      background: white;
-      max-width: 1000px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-      padding: 30px;
-      gap: 30px;
-    }
-
-    .text-section {
-      flex: 1;
-      min-width: 300px;
-    }
-
-    .text-section h2 {
-      color: #333;
-      margin-bottom: 15px;
-    }
-
-    .text-section p {
-      color: #444;
-      line-height: 1.6;
-      font-size: 16px;
-    }
-
-    .image-section {
-      flex: 1;
-      text-align: center;
-      min-width: 250px;
-    }
-
-    .image-section img {
-      background-color: #1F1F1F;
-      height:400px;
-      max-width: 100%;
-      max-height: 500px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.05);
-    }
-
-    .features-section {
-      background: #f0f0f0;
-      padding: 60px 20px;
-      text-align: center;
-    }
-
-    .features-section h2 {
-      color: #333;
-      margin-bottom: 40px;
-    }
-
-    .features {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 30px;
-    }
-
-    .feature-box {
-      background: white;
-      padding: 25px;
-      width: 300px;
-      border-radius: 10px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.08);
-    }
-
-    .feature-box h3 {
-      color: var(--primary-color);
-      margin-bottom: 10px;
-    }
-
-    .feature-box p {
-      color: #555;
       font-size: 15px;
-      line-height: 1.5;
+      font-weight: 600;
+      transition: background 0.3s, transform 0.2s;
     }
 
+    .top-bar a:hover {
+      background: #139279ff;
+      transform: translateY(-1px);
+    }
+
+    /* ================= FLASH ================= */
+    .flash-container {
+      max-width: 1000px;
+      margin: 10px auto 0;
+      padding: 0 30px;
+    }
+
+    .flash {
+      background: white;
+      padding: 14px 16px;
+      border-left: 5px solid var(--accent);
+      margin-bottom: 10px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: #000;
+    }
+
+    .flash-close {
+      float: right;
+      border: none;
+      background: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* ================= HERO ================= */
+    .hero {
+      max-width: 1200px;
+      margin: 60px auto 100px;
+      padding: 0 40px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 60px;
+    }
+
+    .hero-text {
+      flex: 1;
+      min-width: 320px;
+    }
+
+    .hero-text .tag {
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 18px;
+      font-weight: 600;
+    }
+
+    .hero-text h1 {
+      font-size: 54px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 24px;
+    }
+
+    .hero-text p {
+      font-size: 18px;
+      color: #000000;
+      line-height: 1.7;
+      max-width: 540px;
+    }
+
+    .hero-text a {
+      display: inline-block;
+      margin-top: 30px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 4px;
+    }
+
+    .hero-text a:hover {
+      color: #4dffdbff;
+      border-color: #47f1cfff;
+    }
+
+    /* ================= CONTENT ================= */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto 100px;
+      padding: 0 40px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+      color: var(--muted-text);
+    }
+
+    .card h3 {
+      font-size: 20px;
+      margin-bottom: 14px;
+      color: #0f766e;
+    }
+
+    .card p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #374151;
+    }
+
+    .card-footer {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #6b7280;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    /* ================= FOOTER ================= */
     footer {
-      background-color: var(--footer-bg);
-      color: white;
+      padding: 28px;
       text-align: center;
-      padding: 15px;
-      margin-top: 50px;
-    }
-
-    @media (max-width: 768px) {
-      .header-title {
-        text-align: left;
-        font-size: 20px;
-      }
-
-      .header-buttons {
-        margin-top: 10px;
-      }
-
-      .header-buttons a {
-        margin-left: 0;
-        margin-right: 10px;
-      }
-
-      .combined-box {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .text-section, .image-section {
-        text-align: center;
-      }
+      font-size: 16px;
+      color: #000000;
+      font-weight: 500;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- Header -->
-  <header>
-    <div class="header-left">
-      <img src="{{ url_for('static', filename='major-logo.png') }}" alt="Brain Icon" style="height: 80px; width:100%; margin-right: 10px;">
-    </div>
+<!-- TOP RIGHT SIGN UP (NOT FIXED) -->
+<div class="top-bar">
+  <a href="{{ url_for('register') }}">Sign Up</a>
+</div>
 
-    <div class="header-title">TumorVision - Brain Tumor Diagnosis Assistant</div>
+<div class="flash-container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+        <div class="flash">
+          {{ msg }}
+          <button class="flash-close" onclick="this.parentElement.style.display='none'">✕</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</div>
 
-    <div class="header-buttons">
-      <a href="{{ url_for('login') }}">Login</a>
-      <a href="{{ url_for('register') }}">Sign Up</a>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <div class="container">
-    <div class="combined-box">
-
-      <div class="text-section">
-        <h2>Welcome to TumorVision</h2>
-        <p>
-          TumorVision is an AI-powered platform designed to classify brain tumors using MRI images.
-          It supports multi-class diagnosis, including <strong>Glioma</strong>, <strong>Meningioma</strong>,
-          <strong>Pituitary</strong>, and <strong>No Tumor</strong>.
-        </p>
-
-        <p>
-          The system uses advanced deep learning models such as ResNet50, Xception,
-          DenseNet121, and EfficientNetB4 to ensure high accuracy and robust performance.
-        </p>
-
-        <p>
-          TumorVision integrates Explainable AI (XAI) techniques like Grad-CAM and SHAP
-          to visually highlight important regions in MRI scans, making predictions
-          interpretable for doctors, students, and researchers.
-        </p>
-      </div>
-
-      <div class="image-section">
-        <img src="{{ url_for('static', filename='image.webp') }}" alt="Brain MRI">
-      </div>
-
-    </div>
+<section class="hero">
+  <div class="hero-text">
+    <div class="tag">AI in Healthcare</div>
+    <h1>TumorVision-Brain Tumor Detection</h1>
+    <p>
+      TumorVision transforms MRI scans into meaningful diagnostic insights
+      using advanced deep learning models built to support medical decisions.
+    </p>
+    <a href="{{ url_for('login') }}">Find out more →</a>
   </div>
+</section>
 
-  <!-- Features Section -->
-  <div class="features-section">
-    <h2>Key Features of TumorVision</h2>
+<section class="content">
+  <div class="content-grid">
 
-    <div class="features">
-
-      <div class="feature-box">
-        <h3>🧠 Multi-Class MRI Classification</h3>
-        <p>Detects and classifies four tumor types using advanced deep learning models.</p>
-      </div>
-
-      <div class="feature-box">
-        <h3>🔬 Explainable AI</h3>
-        <p>Generates Grad-CAM heatmaps and SHAP visualizations for transparent predictions.</p>
-      </div>
-
-      <div class="feature-box">
-        <h3>📊 Model Comparison</h3>
-        <p>Compares multiple CNN architectures using accuracy, F1-score, ROC-AUC, and more.</p>
-      </div>
-
+    <div class="card">
+      <h3>Reliable AI Diagnosis</h3>
+      <p>
+        Deep neural networks trained on medical imaging data help
+        identify tumor patterns with high accuracy.
+      </p>
+      <div class="card-footer">AI Healthcare</div>
     </div>
-  </div>
 
-  <!-- Footer -->
-  <footer>
-    &copy; 2025 TumorVision | All rights reserved.
-  </footer>
+    <div class="card">
+      <h3>Clinical Decision Support</h3>
+      <p>
+        Designed to assist doctors by providing fast,
+        interpretable insights from MRI scans.
+      </p>
+      <div class="card-footer">Medical Imaging</div>
+    </div>
+
+    <div class="card">
+      <h3>Patient-Centered Design</h3>
+      <p>
+        Clear and understandable results help patients
+        gain confidence in diagnosis.
+      </p>
+      <div class="card-footer">Patient Care</div>
+    </div>
+
+    <div class="card">
+      <h3>Secure & Responsible AI</h3>
+      <p>
+        Built with data privacy and ethical AI principles
+        suitable for healthcare environments.
+      </p>
+      <div class="card-footer">Trust & Safety</div>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  © 2025 TumorVision | Brain Tumor Detection System
+</footer>
 
 </body>
 </html>

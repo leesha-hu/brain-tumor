@@ -1,30 +1,152 @@
-{% extends "base.html" %}
-{% block title %}Chat{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat | TumorVision</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-{% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='chat.css') }}">
+  <style>
+    :root {
+      --header-bg: linear-gradient(135deg, #215472, #e6f2f2);
+      --accent-green: #20c0a0ff;
+      --chat-bg: #e5ddd5;
+    }
 
-<div class="chat-wrapper">
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
 
-  <!-- CHAT HEADER -->
-  <div class="chat-header">
-    <a href="{{ url_for('chats') }}" class="back-btn">← Back to Chats</a>
-    <span class="chat-user">{{ peer.username }}</span>
+    body {
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 36px 40px;
+      background: var(--header-bg);
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #131212;
+    }
+
+    .header-center {
+      font-size: 20px;
+      font-weight: 700;
+      color: #131212;
+      text-align: center;
+      position:relative;
+      right:18px;
+    }
+
+    .header-action a {
+      background: var(--accent-green);
+      color: #003b35;
+      padding: 10px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* ===== CHAT AREA ===== */
+    .chat-container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: var(--chat-bg);
+      padding: 20px;
+      border-radius: 12px;
+      height: 60vh;
+      overflow-y: auto;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      font-size: 14.5px;
+      line-height: 1.4;
+    }
+
+    .sent {
+      background: #dcf8c6;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .received {
+      background: #ffffff;
+      margin-right: auto;
+      text-align: left;
+    }
+
+    /* ===== INPUT ===== */
+    .chat-input {
+      max-width: 900px;
+      margin: 14px auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .chat-input button {
+      background: var(--accent-green);
+      color: #003b35;
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-title">TumorVision</div>
+    <div class="header-center">Chat with {{ peer.username }}</div>
+    <div class="header-action">
+      <a href="{{ url_for('chats') }}">Back to Chats</a>
+    </div>
   </div>
 
-  <!-- MESSAGES -->
-  <div id="messages" class="chat-messages"></div>
+  <!-- CHAT MESSAGES -->
+  <div class="chat-container">
+    {% for msg in messages %}
+    <div class="message {% if msg.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+      <div>{{ msg.content }}</div>
+      <small style="font-size:11px; color:#666;">
+        {{ msg.timestamp.strftime('%d %b %I:%M %p') }}
+      </small>
+    </div>
+    
+    {% endfor %}
+  </div>
 
   <!-- INPUT -->
-  <div class="chat-input">
-    <input type="text" id="msg" placeholder="Type a message…" />
-    <button onclick="sendMessage()">Send</button>
-  </div>
+  <form method="POST" action="{{ url_for('send_message', peer_id=peer.id) }}" class="chat-input">
+    <input type="text" name="content" placeholder="Type a message..." required>
+    <button type="submit">Send</button>
+  </form>
 
-</div>
-
-<script>
-const PEER_ID = {{ peer.id }};
-</script>
-<script src="{{ url_for('static', filename='chat.js') }}"></script>
-{% endblock %}
+</body>
+</html>

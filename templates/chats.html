@@ -1,20 +1,150 @@
-{% extends "base.html" %}
-{% block title %}Chats{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chats | TumorVision</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-{% block content %}
-<h2>Your Chats</h2>
+  <style>
+    :root {
+      --header-bg: linear-gradient(135deg, #215472, #e6f2f2);
+      --accent-green: #20c0a0ff;
+      --chat-bg: #f0f4f8;
+    }
 
-<div class="chat-list">
-  {% for chat in chats %}
-    <a href="{{ url_for('chat', peer_id=chat.peer.id) }}" class="chat-item">
-      <div class="chat-name">{{ chat.peer.username }}</div>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
 
-      {% if chat.unread > 0 %}
-        <span class="chat-badge">{{ chat.unread }}</span>
-      {% endif %}
-    </a>
-  {% else %}
-    <p>No chats yet</p>
-  {% endfor %}
-</div>
-{% endblock %}
+    body {
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    .header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 36px 40px;
+      background: var(--header-bg);
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #131212;
+    }
+
+    .header-center {
+      font-size: 20px;
+      font-weight: 700;
+      color: #131212;
+      text-align: center;
+      position:relative;
+      right:18px;
+    }
+
+    .header-action a {
+      background: var(--accent-green);
+      color: #003b35;
+      padding: 10px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* CHAT LIST */
+    .chat-list {
+      max-width: 900px;
+      margin: 40px auto;
+      background: var(--chat-bg);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+
+    .chat-item {
+      display: flex;
+      padding: 16px 20px;
+      border-bottom: 1px solid #d1d5db;
+      text-decoration: none;
+      color: #000;
+    }
+
+    .chat-item:hover {
+      background: #e6f7f3;
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      margin-right: 16px;
+      color: #003b35;
+    }
+
+    .chat-info {
+      flex: 1;
+    }
+
+    .chat-info h4 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .chat-info p {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .chat-time {
+      font-size: 12px;
+      color: #666;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-title">TumorVision</div>
+    <div class="header-center">Chats</div>
+    <div class="header-action">
+      <a href="{{ url_for('patient_dashboard') if current_user.role=='patient'
+                else url_for('doctor_dashboard') }}">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <!-- CHAT LIST -->
+  <div class="chat-list">
+    {% for item in chats %}
+      <a class="chat-item" href="{{ url_for('chat', peer_id=item.peer.id) }}">
+        <div class="avatar">{{ item.peer.username[0]|upper }}</div>
+
+        <div class="chat-info">
+          <h4>{{ item.peer.username }}</h4>
+          <p>{{ item.last_message.content[:35] }}{% if item.last_message.content|length > 35 %}...{% endif %}</p>
+        </div>
+
+        <div class="chat-time">
+          {{ item.last_message.timestamp.strftime('%d %b %I:%M %p') }}
+        </div>
+      </a>
+    {% else %}
+      <p style="padding:20px;">No conversations yet.</p>
+    {% endfor %}
+  </div>
+
+</body>
+</html>
