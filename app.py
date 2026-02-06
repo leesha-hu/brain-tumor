@@ -13,11 +13,10 @@ import cv2
 from sqlalchemy import or_, and_, desc
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.applications.efficientnet import preprocess_input as eff_preprocess
+from tensorflow.keras.applications.xception import preprocess_input as xception_preprocess
+from tensorflow.keras.models import load_model
+from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
 
-
-# -------------------------------------------------
-# APP FACTORY
-# -------------------------------------------------
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "devkey"
@@ -43,9 +42,10 @@ def create_app():
     def allowed_file(filename):
         return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-    # -------------------------------------------------
-    # LOAD MODELS
-    # -------------------------------------------------
+   
+    
+
+    
     def load_model_from_folder(folder):
         with open(os.path.join(folder, "config.json"), "r") as f:
             model = model_from_json(f.read())
@@ -56,13 +56,133 @@ def create_app():
     MODEL_REGISTRY = {
         "densenet": load_model_from_folder(os.path.join(MODEL_FOLDER, "densenet")),
         "efficientnet": load_model_from_folder(os.path.join(MODEL_FOLDER, "efficient")),
+        "xception": load_model_from_folder(os.path.join(MODEL_FOLDER, "xception")),
+       
     }
 
-    CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"]
+   
+    resnet_path = os.path.join(MODEL_FOLDER, "resnet50_best.keras")
 
-    # -------------------------------------------------
-    # GRAD-CAM
-    # -------------------------------------------------
+    print("\n🔍 Checking ResNet50 model path:")
+    print(resnet_path)
+
+ 
+    if not os.path.exists(resnet_path):
+        raise FileNotFoundError(
+            f"❌ ResNet50 model file NOT FOUND at:\n{resnet_path}"
+        )
+
+    print("✅ ResNet50 model file found.")
+
+
+    try:
+        resnet_model = tf.keras.models.load_model(resnet_path)
+        resnet_model.trainable = False
+        print("✅ ResNet50 model loaded successfully.")
+    except Exception as e:
+        print("❌ ERROR while loading ResNet50 model.")
+        raise e
+
+  
+    print("\n📌 ResNet50 MODEL SUMMARY:")
+    resnet_model.summary()
+
+    
+    MODEL_REGISTRY["resnet50"] = resnet_model
+
+
+    CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"]
+   
+    resnet_base = resnet_model.get_layer("resnet50")
+
+   
+    last_conv_layer = resnet_base.get_layer("conv5_block3_out")
+
+    
+    x = last_conv_layer.output
+    x = resnet_model.get_layer("global_average_pooling2d")(x)
+    x = resnet_model.get_layer("dense")(x)
+    x = resnet_model.get_layer("dropout")(x)
+    predictions = resnet_model.get_layer("dense_1")(x)
+
+ 
+    GRADCAM_RESNET_MODEL = tf.keras.Model(
+        inputs=resnet_base.input,
+        outputs=[last_conv_layer.output, predictions]
+    )
+
+   
+
+
+ 
+   
+    
+    def make_gradcam_heatmap_resnet50(img_array, pred_index=None):
+
+        with tf.GradientTape() as tape:
+            conv_outputs, predictions = GRADCAM_RESNET_MODEL(
+                img_array, training=False
+            )
+
+            if pred_index is None:
+                pred_index = tf.argmax(predictions[0])
+
+            loss = predictions[:, pred_index]
+
+        grads = tape.gradient(loss, conv_outputs)
+
+        if grads is None:
+            raise RuntimeError("Grad-CAM failed: gradients are None")
+
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+
+        conv_outputs = conv_outputs[0]
+        heatmap = tf.reduce_sum(conv_outputs * pooled_grads, axis=-1)
+
+        heatmap = tf.maximum(heatmap, 0)
+        heatmap /= tf.reduce_max(heatmap) + 1e-10
+
+        return heatmap.numpy()
+
+
+    
+    def make_gradcam_heatmap_xception(img_array, model, pred_index=None):
+        last_conv_layer_name = "cam_conv"
+
+        grad_model = tf.keras.models.Model(
+            inputs=model.inputs,
+            outputs=[
+                model.get_layer(last_conv_layer_name).output,
+                model.output
+            ]
+        )
+
+        with tf.GradientTape() as tape:
+            conv_outputs, predictions = grad_model(img_array, training=False)
+
+            # ✅ CRITICAL FIX
+            if isinstance(predictions, (list, tuple)):
+                predictions = predictions[0]
+
+            if pred_index is None:
+                pred_index = tf.argmax(predictions[0])
+
+            loss = predictions[:, pred_index]
+
+        grads = tape.gradient(loss, conv_outputs)
+
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+
+        conv_outputs = conv_outputs[0]
+        heatmap = tf.reduce_sum(conv_outputs * pooled_grads, axis=-1)
+
+        heatmap = tf.maximum(heatmap, 0)
+        heatmap /= tf.reduce_max(heatmap) + 1e-8
+
+        return heatmap.numpy()
+
+
+    
     def make_gradcam_heatmap_densenet(img_array, model, pred_index):
         last_conv_layer = None
         for layer in reversed(model.layers):
@@ -98,6 +218,7 @@ def create_app():
 
         return heatmap.numpy()
 
+
     def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
         data_aug_layer = model.get_layer("sequential_1")
         base_model = model.get_layer(last_conv_layer_name)
@@ -131,7 +252,6 @@ def create_app():
                 x = layer(x)
 
             preds = x
-
             if pred_index is None:
                 pred_index = tf.argmax(preds[0])
 
@@ -142,12 +262,12 @@ def create_app():
 
         conv_outputs = conv_outputs[0]
         heatmap = tf.reduce_sum(conv_outputs * pooled_grads, axis=-1)
-
         heatmap = tf.maximum(heatmap, 0)
         heatmap /= tf.reduce_max(heatmap) + 1e-10
 
         return heatmap.numpy()
 
+   
     def overlay_gradcam(img_path, heatmap, out_path):
         img = cv2.imread(img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -159,33 +279,37 @@ def create_app():
         overlay = cv2.addWeighted(img, 0.6, heatmap, 0.4, 0)
         cv2.imwrite(out_path, cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
 
-    # -------------------------------------------------
-    # IMAGE PREPROCESS
-    # -------------------------------------------------
+    
     def preprocess_image(img_path, model_name, model):
         h, w = model.input_shape[1], model.input_shape[2]
 
         if model_name == "densenet":
+            
             img = Image.open(img_path).convert("L").resize((w, h))
             x = np.array(img).astype("float32") / 255.0
-            x = np.expand_dims(x, axis=-1)
+            x = np.expand_dims(x, axis=-1)   # (H,W,1)
+
         else:
+            
             img = Image.open(img_path).convert("RGB").resize((w, h))
             x = np.array(img).astype("float32")
-            x = eff_preprocess(x)
 
-        return np.expand_dims(x, axis=0)
+            if model_name == "efficientnet":
+                x = eff_preprocess(x)
+            elif model_name == "xception":
+                x = xception_preprocess(x)
+            elif model_name == "resnet50":
+                x = resnet_preprocess(x)
 
-    # -------------------------------------------------
-    # LOGIN
-    # -------------------------------------------------
+        return np.expand_dims(x, axis=0)  
+
+
+    
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # -------------------------------------------------
-    # ROUTES
-    # -------------------------------------------------
+    
     @app.route("/")
     def home():
         return render_template("home.html")
@@ -194,9 +318,9 @@ def create_app():
     def register():
         if request.method == "POST":
             if User.query.filter_by(email=request.form["email"]).first():
+                flash("Email already registered. Please login.", "danger")
+                return redirect(url_for("register"))
 
-               flash("Email already registered. Please login.", "danger")
-               return redirect(url_for("register"))
             user = User(
                 username=request.form["username"],
                 email=request.form["email"],
@@ -204,14 +328,16 @@ def create_app():
             )
 
             user.set_password(request.form["password"])
+
             if request.form["role"] == "doctor":
-            
                 user.hospital = request.form.get("hospital")
                 user.experience_years = int(request.form.get("experience_years", 0))
+
             db.session.add(user)
             db.session.commit()
             flash("Registration successful", "success")
             return redirect(url_for("login"))
+
         return render_template("register.html")
 
     @app.route("/login", methods=["GET", "POST"])
@@ -256,16 +382,7 @@ def create_app():
     @app.route("/tips")
     @login_required
     def tips():
-        return render_template(
-            "tips.html",
-            tips=[
-                "Follow regular medical checkups",
-                "Avoid excessive screen time",
-                "Maintain proper sleep",
-                "Reduce stress",
-                "Eat healthy food",
-            ],
-        )
+        return render_template("tips.html")
 
     @app.route("/send_message/<int:peer_id>", methods=["POST"])
     @login_required
@@ -296,11 +413,7 @@ def create_app():
 
         chat_map = {}
         for msg in msgs:
-            peer_id = (
-                msg.receiver_id
-                if msg.sender_id == current_user.id
-                else msg.sender_id
-            )
+            peer_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
             if peer_id not in chat_map:
                 chat_map[peer_id] = msg
 
@@ -317,22 +430,13 @@ def create_app():
         peer = User.query.get_or_404(peer_id)
         messages = Message.query.filter(
             or_(
-                and_(
-                    Message.sender_id == current_user.id,
-                    Message.receiver_id == peer_id,
-                ),
-                and_(
-                    Message.sender_id == peer_id,
-                    Message.receiver_id == current_user.id,
-                ),
+                and_(Message.sender_id == current_user.id, Message.receiver_id == peer_id),
+                and_(Message.sender_id == peer_id, Message.receiver_id == current_user.id),
             )
         ).order_by(Message.timestamp.asc()).all()
 
         return render_template("chat.html", peer=peer, messages=messages)
 
-    # -------------------------------------------------
-    # UPLOAD + PREDICT
-    # -------------------------------------------------
     @app.route("/upload_predict", methods=["POST"])
     @login_required
     def upload_predict():
@@ -352,6 +456,10 @@ def create_app():
             heatmap = make_gradcam_heatmap_densenet(x, model, idx)
         elif model_name == "efficientnet":
             heatmap = make_gradcam_heatmap(x, model, "efficientnetb4", idx)
+        elif model_name == "xception":
+            heatmap = make_gradcam_heatmap_xception(x, model, idx)
+        elif model_name == "resnet50":
+            heatmap = make_gradcam_heatmap_resnet50(x, idx)
         else:
             heatmap = None
 
@@ -378,10 +486,6 @@ def create_app():
 
     return app
 
-
-# -------------------------------------------------
-# RUN
-# -------------------------------------------------
 if __name__ == "__main__":
     app = create_app()
     app.run(debug=True)

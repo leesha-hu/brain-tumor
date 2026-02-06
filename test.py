@@ -1,35 +1,23 @@
-import tensorflow as tf
-import json
+# fix_resnet_model.py
 import os
+import tensorflow as tf
+from tensorflow.keras.models import load_model
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, "models")
+BASE_DIR = os.path.dirname(__file__)
+OLD_MODEL = os.path.join(BASE_DIR, "models", "resnet50_final_finetuned.h5")
+NEW_MODEL = os.path.join(BASE_DIR, "models", "resnet50_fixed.keras")
 
-def rebuild_model(model_folder, output_name):
-    folder_path = os.path.join(MODELS_DIR, model_folder)
-config_path = os.path.join(folder_path, "config.json")
-    weights_path = os.path.join(folder_path, "model.weights.h5")
+print("Loading old model...")
+old_model = load_model(OLD_MODEL, compile=False)
 
-    print("Looking for:", config_path)
-    print("Looking for:", weights_path)
+print("Rebuilding model as Functional API...")
+inputs = tf.keras.Input(shape=(224, 224, 3))
+outputs = old_model(inputs)
+fixed_model = tf.keras.Model(inputs, outputs)
 
-    # load architecture
-    with open(config_path, "r") as f:
-        config = json.load(f)
+fixed_model.trainable = False
 
-    model = tf.keras.models.model_from_json(json.dumps(config))
+print("Saving fixed model...")
+fixed_model.save(NEW_MODEL)
 
-    # load weights
-    model.load_weights(weights_path)
-
-    # save unified keras model INSIDE models/
-    output_path = os.path.join(MODELS_DIR, output_name)
-    model.save(output_path)
-
-    print(f"✅ Saved model → {output_path}")
-
-# ---------- DenseNet ----------
-rebuild_model("densenet", "densenet_model.keras")
-
-# ---------- EfficientNet ----------
-rebuild_model("efficient", "efficientnet_model.keras")
+print("✅ Model fixed and saved as:", NEW_MODEL)
