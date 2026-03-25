@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Explainability Results</title>
+
+  <style>
+    body {
+      font-family: "Segoe UI";
+      padding: 40px;
+      background: #ffffff;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    .card {
+      background: #f8fafc;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    img {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    .metrics {
+      margin-top: 10px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+    <h2>Explainability for {{ label }}</h2>
+
+    <div class="grid">
+    
+      <div class="card">
+        <h3>SHAP Attribution</h3>
+        <img src="{{ shap_url }}">
+      </div>
+    
+      <div class="card">
+        <h3>Insertion Test</h3>
+        <img src="{{ insertion_url }}">
+      </div>
+    
+      <div class="card">
+        <h3>Deletion Test</h3>
+        <img src="{{ deletion_url }}">
+      </div>
+    
+    </div>
+
+</body>
+</html>

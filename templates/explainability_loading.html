@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generating Explainability</title>
+  <style>
+    body {
+      font-family: Arial;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f4f7f9;
+    }
+
+    .box {
+      text-align: center;
+    }
+
+    .loader {
+      border: 6px solid #eee;
+      border-top: 6px solid #20c0a0;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    h2 {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <div class="loader"></div>
+    <h2>Generating SHAP & Explainability Metrics...</h2>
+    <p>This may take a few seconds.</p>
+  </div>
+
+  <script>
+    setTimeout(() => {
+      window.location.href = "/run_explainability";
+    }, 1000);
+  </script>
+</body>
+</html>
