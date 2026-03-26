@@ -112,6 +112,11 @@ def create_app():
                 "blur(32,32)",   
                 shape=(H, W, 3) 
             )
+        elif model_name == "densenet":
+            masker = shap.maskers.Image(
+                "blur(64,64)",   
+                shape=(H, W, 1) 
+            )
         else:
             masker = shap.maskers.Image(
                 "blur(64,64)",   # good for MRI
@@ -420,12 +425,21 @@ def create_app():
         # -------------------------------
         # 2. Load image
         # -------------------------------
-        original_img = image.load_img(image_path, target_size=IMG_SIZE)
-        original_arr = image.img_to_array(original_img)  # (H,W,3)
+        if model_name == "densenet":
+            original_img = image.load_img(
+                image_path,
+                color_mode="grayscale",
+                target_size=IMG_SIZE
+            )
+            original_arr = image.img_to_array(original_img)  # (H,W,1)
+        else:
+            original_img = image.load_img(image_path, target_size=IMG_SIZE)
+            original_arr = image.img_to_array(original_img)  # (H,W,3)
 
         # -------------------------------
         # 3. Preprocess
         # -------------------------------
+
         img_batch = np.expand_dims(original_arr, axis=0)
         img_batch = preprocess_input(img_batch)
 
@@ -460,7 +474,10 @@ def create_app():
                 shap_for_class_i = shap_values_4d[..., i]
 
                 # Notebook style visualization
-                s_i_agg = np.sum(shap_for_class_i, axis=-1, keepdims=True)
+                if shap_for_class_i.shape[-1] == 1:
+                    s_i_agg = shap_for_class_i  # already single channel
+                else:
+                    s_i_agg = np.sum(shap_for_class_i, axis=-1, keepdims=True)
                 s_i_3ch = np.repeat(s_i_agg, 3, axis=-1)
 
                 shap_values_final_list.append(s_i_3ch)
@@ -470,7 +487,10 @@ def create_app():
             # -------------------------------
             shap_pred = shap_values_4d[..., pred_idx]  # (H,W,3)
 
-            saliency_map = np.mean(np.abs(shap_pred), axis=-1)  # (H,W)
+            if shap_pred.shape[-1] == 1:
+                saliency_map = np.abs(shap_pred[..., 0])
+            else:
+                saliency_map = np.mean(np.abs(shap_pred), axis=-1)  # (H,W)
 
             # Normalize
             saliency_map -= saliency_map.min()
@@ -502,9 +522,13 @@ def create_app():
         output_path = os.path.join(save_dir, filename)
 
         plt.figure()
+        if original_arr.shape[-1] == 1:
+            display_arr = np.repeat(original_arr, 3, axis=-1)
+        else:
+            display_arr = original_arr
         shap.image_plot(
             shap_values_final_list,
-            original_arr,
+            display_arr,
             labels=plot_labels,
             show=False
         )
@@ -947,17 +971,36 @@ def create_app():
 
         result_name = f"gradcam_{filename}"
         result_path = os.path.join(RESULT_FOLDER, result_name)
-        if model_name == "xception" or model_name == "efficientnet":
-            shap_path, saliency_map = generate_xception_shap_with_saliency(
-                model,
-                model_name,
-                img_path,
-                CLASS_NAMES,
-                explainer=EXPLAINERS[model_name],  # You can pass a custom explainer if needed
-                save_dir=RESULT_FOLDER
+        # if model_name == "xception" or model_name == "efficientnet" or model_name == "resnet50":
+        shap_path, saliency_map = generate_xception_shap_with_saliency(
+            model,
+            model_name,
+            img_path,
+            CLASS_NAMES,
+            explainer=EXPLAINERS[model_name],  # You can pass a custom explainer if needed
+            save_dir=RESULT_FOLDER
+        )
+        # else:
+        #     shap_path,saliency_map = generate_shap_image(img_path,x,img_arr, model_name,RESULT_FOLDER,idx)
+
+        if heatmap is not None:
+            overlay_gradcam(img_path, heatmap, result_path)
+
+        if model_name == "densenet":
+            return render_template(
+                "prediction_result.html",
+                orig_url=url_for("static", filename=f"uploads/{filename}"),
+                result_url=url_for("static", filename=f"results/{result_name}"),
+                label=CLASS_NAMES[idx],
+                confidence=round(float(preds[0][idx]) * 100, 2),
+                model_used=model_name.capitalize(),
+                shap_url=url_for("static", filename=f"results/{os.path.basename(shap_path)}"),
+                # deletion_url=url_for("static", filename=f"results/{os.path.basename(metrics['deletion_image'])}"),
+                # insertion_url=url_for("static", filename=f"results/{os.path.basename(metrics['insertion_image'])}"),
+                # sensitivity_n=metrics["sensitivity_n"],
+                # avg_conf_drop=metrics["avg_conf_drop"],
+                # avg_conf_gain=metrics["avg_conf_gain"]
             )
-        else:
-            shap_path,saliency_map = generate_shap_image(img_path,x,img_arr, model_name,RESULT_FOLDER,idx)
 
         metrics = generate_explanation_metrics(
             model,
@@ -968,9 +1011,7 @@ def create_app():
             img_path          # original image path (for naming outputs
         )
 
-        if heatmap is not None:
-            overlay_gradcam(img_path, heatmap, result_path)
-
+        
         return render_template(
             "prediction_result.html",
             orig_url=url_for("static", filename=f"uploads/{filename}"),
