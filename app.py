@@ -58,19 +58,6 @@ def create_app():
     def allowed_file(filename):
         return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-    # def load_model_from_folder(folder):
-    #     with open(os.path.join(folder, "config.json"), "r") as f:
-    #         model = model_from_json(f.read())
-    #     model.load_weights(os.path.join(folder, "model.weights.h5"))
-    #     model.trainable = False
-    #     return model
-
-    # MODEL_REGISTRY = {
-    #     "densenet": load_model_from_folder(os.path.join(MODEL_FOLDER, "densenet")),
-    #     "efficientnet": load_model_from_folder(os.path.join(MODEL_FOLDER, "efficient")),
-    #     "xception": load_model_from_folder(os.path.join(MODEL_FOLDER, "xception")),
-       
-    # } 
     def load_model_file(path):
         model = tf.keras.models.load_model(path)
         model.trainable = False
@@ -90,10 +77,6 @@ def create_app():
     except Exception as e:
         print("❌ ERROR while loading ResNet50 model.")
         raise e
-
-  
-    # print("\n📌 ResNet50 MODEL SUMMARY:")
-    # resnet_model.summary()
 
     
     MODEL_REGISTRY["resnet50"] = resnet_model
@@ -138,25 +121,6 @@ def create_app():
 
     for name, model in MODEL_REGISTRY.items():
         EXPLAINERS[name] = create_explainer(name,model, CLASS_NAMES)
-
-    # xception_model = MODEL_REGISTRY["xception"]
-
-    # # Use model input size
-    # H, W = xception_model.input_shape[1], xception_model.input_shape[2]
-
-    # masker = shap.maskers.Image(
-    #     "blur(64,64)",
-    #     shape=(H, W, 3)
-    # )
-
-    # def model_predict(x):
-    #     return xception_model.predict(x)
-
-    # xception_explainer = shap.Explainer(
-    #     model_predict,
-    #     masker,
-    #     output_names=CLASS_NAMES
-    # )
    
     resnet_base = resnet_model.get_layer("resnet50")
 
@@ -537,75 +501,6 @@ def create_app():
 
         return output_path, saliency_map
 
-    def generate_shap_image(image_path,img_batch, img_arr, model_name="resnet", save_dir="static", idx=0):
-        model = MODEL_REGISTRY[model_name]
-        IMG_SIZE = (model.input_shape[1], model.input_shape[2])
-            
-        # preprocess_input = get_preprocess_function(model_name)
-
-        # # Load image
-        # img = image.load_img(image_path, target_size=IMG_SIZE)
-        # img_arr = image.img_to_array(img)
-        # img_batch = np.expand_dims(img_arr, axis=0)
-        # img_batch = preprocess_input(img_batch)
-
-        # -------------------------------
-        # SHAP
-        # -------------------------------
-        masker = shap.maskers.Image("inpaint_telea", img_arr.shape)
-
-        explainer = shap.Explainer(
-            MODEL_REGISTRY[model_name],
-            masker=masker,
-            output_names=CLASS_NAMES
-        )
-
-        shap_values = explainer(
-            img_batch,
-            max_evals=50,   # reduce if slow
-            batch_size=10
-        ).values
-
-        # -------------------------------
-        # PROCESS SHAP OUTPUT
-        # -------------------------------
-        shap_list = []
-
-        # 👉 Convert SHAP → saliency
-        saliency_map = shap_to_saliency(shap_values, idx)
-
-        if isinstance(shap_values, np.ndarray) and shap_values.ndim == 5:
-            shap_values = np.squeeze(shap_values, axis=0)
-
-            for i in range(shap_values.shape[-1]):
-                s = shap_values[..., i]
-                s = np.sum(s, axis=-1, keepdims=True)
-                s = np.repeat(s, 3, axis=-1)
-                shap_list.append(s)
-
-        else:
-            # fallback (handles unexpected formats)
-            s = np.squeeze(shap_values)
-            if s.ndim == 3:
-                if s.shape[-1] == 1:
-                    s = np.repeat(s, 3, axis=-1)
-                shap_list.append(s)
-
-        # -------------------------------
-        # SAVE IMAGE
-        # -------------------------------
-        filename_base = os.path.basename(image_path)
-        os.makedirs(save_dir, exist_ok=True)
-        output_path = os.path.join(save_dir, f"shap_{model_name}_{filename_base}.png")
-
-        plt.figure()
-        shap.image_plot(shap_list, img_arr, show=False)
-        plt.savefig(output_path, bbox_inches="tight")
-        plt.close()
-
-        return output_path,saliency_map
-    
-    
     
 
     # -----------------------------
@@ -622,6 +517,7 @@ def create_app():
     def generate_explanation_metrics(model, img_array, saliency_map, model_name, save_dir, image_path):
 
         os.makedirs(save_dir, exist_ok=True)
+        C = img_array.shape[3]
 
         # -----------------------------
         # Ensure correct shape
@@ -641,12 +537,17 @@ def create_app():
             confidences = []
             baseline = model_confidence(model, img, pred_class_idx)
 
-            flat_img = img.reshape(-1, 3)
+            flat_img = img.reshape(-1, C)
 
             for i in range(50):
                 k = int((i + 1) / 50 * len(order))
-                flat_img[order[:k]] = 0
-                img_step = flat_img.reshape(1, H, W, 3)
+                if C == 1:
+                    background = np.mean(img)
+
+                    flat_img[order[:k]] = background
+                else:
+                    flat_img[order[:k]] = 0
+                img_step = flat_img.reshape(1, H, W, C)
                 conf = model_confidence(model, img_step, pred_class_idx)
                 confidences.append(conf)
 
@@ -658,17 +559,19 @@ def create_app():
         def insertion_test():
             saliency = saliency_map.flatten()
             order = np.argsort(-saliency)
-
-            blank = np.zeros_like(img_array)
+            if C == 1:
+                blank = np.ones_like(img_array) * np.mean(img_array)
+            else:
+                blank = np.zeros_like(img_array)
             confidences = []
 
-            flat_blank = blank.reshape(-1, 3)
-            flat_img = img_array.reshape(-1, 3)
+            flat_blank = blank.reshape(-1, C)
+            flat_img = img_array.reshape(-1, C)
 
             for i in range(50):
                 k = int((i + 1) / 50 * len(order))
                 flat_blank[order[:k]] = flat_img[order[:k]]
-                img_step = flat_blank.reshape(1, H, W, 3)
+                img_step = flat_blank.reshape(1, H, W, C)
                 conf = model_confidence(model, img_step, pred_class_idx)
                 confidences.append(conf)
 
@@ -679,7 +582,7 @@ def create_app():
         # -----------------------------
         def sensitivity_n():
             flat_sal = saliency_map.flatten()
-            flat_img = img_array.reshape(-1, 3)
+            flat_img = img_array.reshape(-1, C)
 
             scores = []
             deltas = []
@@ -690,8 +593,11 @@ def create_app():
                 idx = np.random.choice(len(flat_sal), size=200, replace=False)
 
                 masked = flat_img.copy()
-                masked[idx] = 0
-                masked_img = masked.reshape(1, H, W, 3)
+                if C == 1:
+                        masked[idx] = np.mean(img_array)
+                else:
+                    masked[idx] = 0
+                masked_img = masked.reshape(1, H, W, C)
 
                 conf = model_confidence(model, masked_img, pred_class_idx)
                 deltas.append(baseline - conf)
@@ -705,7 +611,10 @@ def create_app():
         def avg_conf_drop():
             mask = saliency_map > 0.5
             masked = img_array.copy()
-            masked[0][~mask] = 0
+            if C == 1:
+                masked[0][~mask] = np.mean(img_array)
+            else:
+                masked[0][~mask] = 0
 
             c1 = model_confidence(model, img_array, pred_class_idx)
             c2 = model_confidence(model, masked, pred_class_idx)
@@ -971,7 +880,7 @@ def create_app():
 
         result_name = f"gradcam_{filename}"
         result_path = os.path.join(RESULT_FOLDER, result_name)
-        # if model_name == "xception" or model_name == "efficientnet" or model_name == "resnet50":
+        
         shap_path, saliency_map = generate_xception_shap_with_saliency(
             model,
             model_name,
@@ -980,27 +889,10 @@ def create_app():
             explainer=EXPLAINERS[model_name],  # You can pass a custom explainer if needed
             save_dir=RESULT_FOLDER
         )
-        # else:
-        #     shap_path,saliency_map = generate_shap_image(img_path,x,img_arr, model_name,RESULT_FOLDER,idx)
 
         if heatmap is not None:
             overlay_gradcam(img_path, heatmap, result_path)
 
-        if model_name == "densenet":
-            return render_template(
-                "prediction_result.html",
-                orig_url=url_for("static", filename=f"uploads/{filename}"),
-                result_url=url_for("static", filename=f"results/{result_name}"),
-                label=CLASS_NAMES[idx],
-                confidence=round(float(preds[0][idx]) * 100, 2),
-                model_used=model_name.capitalize(),
-                shap_url=url_for("static", filename=f"results/{os.path.basename(shap_path)}"),
-                # deletion_url=url_for("static", filename=f"results/{os.path.basename(metrics['deletion_image'])}"),
-                # insertion_url=url_for("static", filename=f"results/{os.path.basename(metrics['insertion_image'])}"),
-                # sensitivity_n=metrics["sensitivity_n"],
-                # avg_conf_drop=metrics["avg_conf_drop"],
-                # avg_conf_gain=metrics["avg_conf_gain"]
-            )
 
         metrics = generate_explanation_metrics(
             model,
