@@ -19,6 +19,10 @@ from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_pr
 from flask import make_response
 import pdfkit
 import shap
+
+import matplotlib
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing import image
 from scipy.stats import spearmanr
@@ -26,6 +30,7 @@ from scipy.stats import spearmanr
 PDF_CONFIG = pdfkit.configuration(
      wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
 )
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "devkey"
@@ -53,17 +58,28 @@ def create_app():
     def allowed_file(filename):
         return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-    def load_model_from_folder(folder):
-        with open(os.path.join(folder, "config.json"), "r") as f:
-            model = model_from_json(f.read())
-        model.load_weights(os.path.join(folder, "model.weights.h5"))
+    # def load_model_from_folder(folder):
+    #     with open(os.path.join(folder, "config.json"), "r") as f:
+    #         model = model_from_json(f.read())
+    #     model.load_weights(os.path.join(folder, "model.weights.h5"))
+    #     model.trainable = False
+    #     return model
+
+    # MODEL_REGISTRY = {
+    #     "densenet": load_model_from_folder(os.path.join(MODEL_FOLDER, "densenet")),
+    #     "efficientnet": load_model_from_folder(os.path.join(MODEL_FOLDER, "efficient")),
+    #     "xception": load_model_from_folder(os.path.join(MODEL_FOLDER, "xception")),
+       
+    # } 
+    def load_model_file(path):
+        model = tf.keras.models.load_model(path)
         model.trainable = False
         return model
-
+    
     MODEL_REGISTRY = {
-        "densenet": load_model_from_folder(os.path.join(MODEL_FOLDER, "densenet")),
-        "efficientnet": load_model_from_folder(os.path.join(MODEL_FOLDER, "efficient")),
-        "xception": load_model_from_folder(os.path.join(MODEL_FOLDER, "xception")),
+        "densenet": load_model_file(os.path.join(MODEL_FOLDER, "densenet21_model_94.27_3.keras")),
+        "efficientnet": load_model_file(os.path.join(MODEL_FOLDER, "efficientnetb4_brain_tumor.keras")),
+        "xception": load_model_file(os.path.join(MODEL_FOLDER, "xception_brain_tumor_cam.keras")),
        
     } 
     resnet_path = os.path.join(MODEL_FOLDER, "resnet50_best")
@@ -76,14 +92,35 @@ def create_app():
         raise e
 
   
-    print("\n📌 ResNet50 MODEL SUMMARY:")
-    resnet_model.summary()
+    # print("\n📌 ResNet50 MODEL SUMMARY:")
+    # resnet_model.summary()
 
     
     MODEL_REGISTRY["resnet50"] = resnet_model
 
+    
+
 
     CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"]
+
+    xception_model = MODEL_REGISTRY["xception"]
+
+    # Use model input size
+    H, W = xception_model.input_shape[1], xception_model.input_shape[2]
+
+    masker = shap.maskers.Image(
+        "blur(64,64)",
+        shape=(H, W, 3)
+    )
+
+    def model_predict(x):
+        return xception_model.predict(x)
+
+    xception_explainer = shap.Explainer(
+        model_predict,
+        masker,
+        output_names=CLASS_NAMES
+    )
    
     resnet_base = resnet_model.get_layer("resnet50")
 
@@ -287,7 +324,8 @@ def create_app():
             elif model_name == "resnet50":
                 x = resnet_preprocess(x)
 
-        return np.expand_dims(x, axis=0)  
+        x_batch=np.expand_dims(x, axis=0)
+        return x_batch,x
 
     TUMOR_PRECAUTIONS = {
     "glioma": [
@@ -330,18 +368,131 @@ def create_app():
             return resnet_preprocess
         else:
             raise ValueError(f"Unknown preprocess function: {name}")
+        
+    def generate_xception_shap_with_saliency(
+        model,
+        model_name,
+        image_path,
+        class_names,
+        explainer,
+        save_dir="static/results"
+    ):
+        print(f"Explainer: {explainer}")
+        os.makedirs(save_dir, exist_ok=True)
+        preprocess_input = get_preprocess_function(model_name)
 
-    def generate_shap_image(image_path, model_name="resnet", save_dir="static", idx=0):
+        # -------------------------------
+        # 1. Input size
+        # -------------------------------
+        IMG_SIZE = (model.input_shape[1], model.input_shape[2])
+
+        # -------------------------------
+        # 2. Load image
+        # -------------------------------
+        original_img = image.load_img(image_path, target_size=IMG_SIZE)
+        original_arr = image.img_to_array(original_img)  # (H,W,3)
+
+        # -------------------------------
+        # 3. Preprocess
+        # -------------------------------
+        img_batch = np.expand_dims(original_arr, axis=0)
+        img_batch = preprocess_input(img_batch)
+
+        # -------------------------------
+        # 4. SHAP
+        # -------------------------------
+        shap_values_obj = explainer(
+            img_batch,
+            max_evals=100,
+            batch_size=10
+        )
+
+        shap_values_raw = shap_values_obj.values
+
+        # -------------------------------
+        # 5. Prediction
+        # -------------------------------
+        preds = model.predict(img_batch, verbose=0)
+        pred_idx = int(np.argmax(preds))
+
+        num_classes = model.output_shape[-1]
+
+        # -------------------------------
+        # 6. Process SHAP (notebook style)
+        # -------------------------------
+        shap_values_final_list = []
+
+        if isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 5:
+            shap_values_4d = np.squeeze(shap_values_raw, axis=0)
+
+            for i in range(num_classes):
+                shap_for_class_i = shap_values_4d[..., i]
+
+                # Notebook style visualization
+                s_i_agg = np.sum(shap_for_class_i, axis=-1, keepdims=True)
+                s_i_3ch = np.repeat(s_i_agg, 3, axis=-1)
+
+                shap_values_final_list.append(s_i_3ch)
+
+            # -------------------------------
+            # 🔥 SALIENCY MAP (predicted class)
+            # -------------------------------
+            shap_pred = shap_values_4d[..., pred_idx]  # (H,W,3)
+
+            saliency_map = np.mean(np.abs(shap_pred), axis=-1)  # (H,W)
+
+            # Normalize
+            saliency_map -= saliency_map.min()
+            saliency_map /= (saliency_map.max() + 1e-8)
+
+        else:
+            # fallback
+            s_val = np.squeeze(shap_values_raw)
+            if s_val.ndim == 3:
+                if s_val.shape[-1] == 1:
+                    s_val = np.repeat(s_val, 3, axis=-1)
+
+                shap_values_final_list.append(s_val)
+
+                # fallback saliency
+                saliency_map = np.mean(np.abs(s_val), axis=-1)
+                saliency_map -= saliency_map.min()
+                saliency_map /= (saliency_map.max() + 1e-8)
+
+        # -------------------------------
+        # 7. Labels
+        # -------------------------------
+        plot_labels = [class_names[i] for i in range(num_classes)]
+
+        # -------------------------------
+        # 8. Save SHAP image
+        # -------------------------------
+        filename = f"xception_shap_{os.path.basename(image_path)}"
+        output_path = os.path.join(save_dir, filename)
+
+        plt.figure()
+        shap.image_plot(
+            shap_values_final_list,
+            original_arr,
+            labels=plot_labels,
+            show=False
+        )
+        plt.savefig(output_path, bbox_inches="tight")
+        plt.close("all")
+
+        return output_path, saliency_map
+
+    def generate_shap_image(image_path,img_batch, img_arr, model_name="resnet", save_dir="static", idx=0):
         model = MODEL_REGISTRY[model_name]
         IMG_SIZE = (model.input_shape[1], model.input_shape[2])
             
-        preprocess_input = get_preprocess_function(model_name)
+        # preprocess_input = get_preprocess_function(model_name)
 
-        # Load image
-        img = image.load_img(image_path, target_size=IMG_SIZE)
-        img_arr = image.img_to_array(img)
-        img_batch = np.expand_dims(img_arr, axis=0)
-        img_batch = preprocess_input(img_batch)
+        # # Load image
+        # img = image.load_img(image_path, target_size=IMG_SIZE)
+        # img_arr = image.img_to_array(img)
+        # img_batch = np.expand_dims(img_arr, axis=0)
+        # img_batch = preprocess_input(img_batch)
 
         # -------------------------------
         # SHAP
@@ -388,8 +539,9 @@ def create_app():
         # -------------------------------
         # SAVE IMAGE
         # -------------------------------
+        filename_base = os.path.basename(image_path)
         os.makedirs(save_dir, exist_ok=True)
-        output_path = os.path.join(save_dir, f"shap_{model_name}.png")
+        output_path = os.path.join(save_dir, f"shap_{model_name}_{filename_base}.png")
 
         plt.figure()
         shap.image_plot(shap_list, img_arr, show=False)
@@ -412,7 +564,7 @@ def create_app():
     # -----------------------------
     # MAIN FUNCTION
     # -----------------------------
-    def generate_explanation_metrics(model, img_array, saliency_map, model_name, save_dir):
+    def generate_explanation_metrics(model, img_array, saliency_map, model_name, save_dir, image_path):
 
         os.makedirs(save_dir, exist_ok=True)
 
@@ -527,8 +679,9 @@ def create_app():
         # -----------------------------
         # Save plots
         # -----------------------------
-        deletion_path = os.path.join(save_dir, f"deletion_{model_name}.png")
-        insertion_path = os.path.join(save_dir, f"insertion_{model_name}.png")
+        filename_base = os.path.basename(image_path)
+        deletion_path = os.path.join(save_dir, f"deletion_{model_name}_{filename_base}.png")
+        insertion_path = os.path.join(save_dir, f"insertion_{model_name}_{filename_base}.png")
 
         # Deletion plot
         plt.figure()
@@ -746,7 +899,7 @@ def create_app():
         img_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(img_path)
 
-        x = preprocess_image(img_path, model_name, model)
+        x,img_arr = preprocess_image(img_path, model_name, model)
         preds = model.predict(x)
         idx = int(np.argmax(preds[0]))
 
@@ -763,14 +916,25 @@ def create_app():
 
         result_name = f"gradcam_{filename}"
         result_path = os.path.join(RESULT_FOLDER, result_name)
-        shap_path,saliency_map = generate_shap_image(img_path, model_name,RESULT_FOLDER,idx)
+        if model_name == "xception":
+            shap_path, saliency_map = generate_xception_shap_with_saliency(
+                model,
+                model_name,
+                img_path,
+                CLASS_NAMES,
+                explainer=xception_explainer,  # You can pass a custom explainer if needed
+                save_dir=RESULT_FOLDER
+            )
+        else:
+            shap_path,saliency_map = generate_shap_image(img_path,x,img_arr, model_name,RESULT_FOLDER,idx)
 
         metrics = generate_explanation_metrics(
             model,
             x,                # preprocessed image (1,H,W,3)
             saliency_map,     # your SHAP or GradCAM map
             model_name,
-            RESULT_FOLDER
+            RESULT_FOLDER,
+            img_path          # original image path (for naming outputs
         )
 
         if heatmap is not None:
@@ -783,9 +947,9 @@ def create_app():
             label=CLASS_NAMES[idx],
             confidence=round(float(preds[0][idx]) * 100, 2),
             model_used=model_name.capitalize(),
-            shap_url=url_for("static", filename=f"results/shap_{model_name}.png"),
-            deletion_url=url_for("static", filename=f"results/deletion_{model_name}.png"),
-            insertion_url=url_for("static", filename=f"results/insertion_{model_name}.png"),
+            shap_url=url_for("static", filename=f"results/{os.path.basename(shap_path)}"),
+            deletion_url=url_for("static", filename=f"results/{os.path.basename(metrics['deletion_image'])}"),
+            insertion_url=url_for("static", filename=f"results/{os.path.basename(metrics['insertion_image'])}"),
             sensitivity_n=metrics["sensitivity_n"],
             avg_conf_drop=metrics["avg_conf_drop"],
             avg_conf_gain=metrics["avg_conf_gain"]

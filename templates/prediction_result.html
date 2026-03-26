@@ -188,20 +188,30 @@
         {% endif %}
       </div>
 
-      <div class="image-card">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;">
         <h4>SHAP Visualization</h4>
         {% if shap_url %}
           <img src="{{shap_url}}" alt="Shap image">
         {% else %}
           <p class="no-heatmap">Heatmap not generated</p>
         {% endif %}
-      </div>
 
-      <h4>Average Confidence Gain: {{avg_conf_gain}}</h4>
-      <h4>Average Confidence Drop: {{avg_conf_drop}}</h4>
-      <h4>Sensitivity-n: {{sensitivity_n}}</h4>
-      <img src="{{deletion_url}}" alt="deletion image">
-      <img src="{{insertion_url}}" alt="insertion image">
+      </div>
+     
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;">
+        <h4>Average Confidence Gain: {{avg_conf_gain}}</h4>
+        <h4>Average Confidence Drop: {{avg_conf_drop}}</h4>
+        <h4>Sensitivity-n: {{sensitivity_n}}</h4>
+
+      </div>
+      <div class="image-card">
+        <img src="{{deletion_url}}" alt="deletion image">
+        
+      </div>
+      <div class="image-card">
+        <img src="{{insertion_url}}" alt="insertion image">
+
+      </div>
     
     </div>
 
