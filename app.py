@@ -103,24 +103,55 @@ def create_app():
 
     CLASS_NAMES = ["glioma", "meningioma", "no_tumor", "pituitary"]
 
-    xception_model = MODEL_REGISTRY["xception"]
+    def create_explainer(model_name, model, class_names):
 
-    # Use model input size
-    H, W = xception_model.input_shape[1], xception_model.input_shape[2]
+        H, W = model.input_shape[1], model.input_shape[2]
 
-    masker = shap.maskers.Image(
-        "blur(64,64)",
-        shape=(H, W, 3)
-    )
+        if model_name == "efficientnet":
+            masker = shap.maskers.Image(
+                "blur(32,32)",   
+                shape=(H, W, 3) 
+            )
+        else:
+            masker = shap.maskers.Image(
+                "blur(64,64)",   # good for MRI
+                shape=(H, W, 3)
+            )
 
-    def model_predict(x):
-        return xception_model.predict(x)
+        def model_predict(x):
+            return model.predict(x)
 
-    xception_explainer = shap.Explainer(
-        model_predict,
-        masker,
-        output_names=CLASS_NAMES
-    )
+        explainer = shap.Explainer(
+            model_predict,
+            masker,
+            output_names=class_names
+        )
+
+        return explainer
+    
+    EXPLAINERS = {}
+
+    for name, model in MODEL_REGISTRY.items():
+        EXPLAINERS[name] = create_explainer(name,model, CLASS_NAMES)
+
+    # xception_model = MODEL_REGISTRY["xception"]
+
+    # # Use model input size
+    # H, W = xception_model.input_shape[1], xception_model.input_shape[2]
+
+    # masker = shap.maskers.Image(
+    #     "blur(64,64)",
+    #     shape=(H, W, 3)
+    # )
+
+    # def model_predict(x):
+    #     return xception_model.predict(x)
+
+    # xception_explainer = shap.Explainer(
+    #     model_predict,
+    #     masker,
+    #     output_names=CLASS_NAMES
+    # )
    
     resnet_base = resnet_model.get_layer("resnet50")
 
@@ -916,13 +947,13 @@ def create_app():
 
         result_name = f"gradcam_{filename}"
         result_path = os.path.join(RESULT_FOLDER, result_name)
-        if model_name == "xception":
+        if model_name == "xception" or model_name == "efficientnet":
             shap_path, saliency_map = generate_xception_shap_with_saliency(
                 model,
                 model_name,
                 img_path,
                 CLASS_NAMES,
-                explainer=xception_explainer,  # You can pass a custom explainer if needed
+                explainer=EXPLAINERS[model_name],  # You can pass a custom explainer if needed
                 save_dir=RESULT_FOLDER
             )
         else:
