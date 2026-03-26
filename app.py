@@ -201,6 +201,7 @@ def create_app():
 
         heatmap = tf.maximum(heatmap, 0)
         heatmap /= tf.reduce_max(heatmap) + 1e-8
+        heatmap = 1 - heatmap
 
         return heatmap.numpy()
 
@@ -238,6 +239,7 @@ def create_app():
 
         heatmap = tf.maximum(heatmap, 0)
         heatmap /= tf.reduce_max(heatmap) + 1e-10
+        heatmap=1-heatmap
 
         return heatmap.numpy()
 
