@@ -18,6 +18,10 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.applications.resnet50 import preprocess_input as resnet_preprocess
 from flask import make_response
 import pdfkit
+import shap
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing import image
+from scipy.stats import spearmanr
 
 PDF_CONFIG = pdfkit.configuration(
      wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
@@ -38,6 +42,8 @@ def create_app():
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
     RESULT_FOLDER = os.path.join(BASE_DIR, "static", "results")
     MODEL_FOLDER = os.path.join(BASE_DIR, "models")
+
+
 
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(RESULT_FOLDER, exist_ok=True)
@@ -60,7 +66,7 @@ def create_app():
         "xception": load_model_from_folder(os.path.join(MODEL_FOLDER, "xception")),
        
     } 
-    resnet_path = os.path.join(MODEL_FOLDER, "resnet50_best.keras")
+    resnet_path = os.path.join(MODEL_FOLDER, "resnet50_best")
     try:
         resnet_model = tf.keras.models.load_model(resnet_path)
         resnet_model.trainable = False
@@ -312,7 +318,247 @@ def create_app():
         "Balanced diet and exercise"
     ]
     }
+
+    def get_preprocess_function(name):
+        if name == "densenet":
+            return lambda x: x / 255.0
+        elif name == "efficientnet":
+            return eff_preprocess
+        elif name == "xception":
+            return xception_preprocess
+        elif name == "resnet50":
+            return resnet_preprocess
+        else:
+            raise ValueError(f"Unknown preprocess function: {name}")
+
+    def generate_shap_image(image_path, model_name="resnet", save_dir="static", idx=0):
+        model = MODEL_REGISTRY[model_name]
+        IMG_SIZE = (model.input_shape[1], model.input_shape[2])
+            
+        preprocess_input = get_preprocess_function(model_name)
+
+        # Load image
+        img = image.load_img(image_path, target_size=IMG_SIZE)
+        img_arr = image.img_to_array(img)
+        img_batch = np.expand_dims(img_arr, axis=0)
+        img_batch = preprocess_input(img_batch)
+
+        # -------------------------------
+        # SHAP
+        # -------------------------------
+        masker = shap.maskers.Image("inpaint_telea", img_arr.shape)
+
+        explainer = shap.Explainer(
+            MODEL_REGISTRY[model_name],
+            masker=masker,
+            output_names=CLASS_NAMES
+        )
+
+        shap_values = explainer(
+            img_batch,
+            max_evals=50,   # reduce if slow
+            batch_size=10
+        ).values
+
+        # -------------------------------
+        # PROCESS SHAP OUTPUT
+        # -------------------------------
+        shap_list = []
+
+        # 👉 Convert SHAP → saliency
+        saliency_map = shap_to_saliency(shap_values, idx)
+
+        if isinstance(shap_values, np.ndarray) and shap_values.ndim == 5:
+            shap_values = np.squeeze(shap_values, axis=0)
+
+            for i in range(shap_values.shape[-1]):
+                s = shap_values[..., i]
+                s = np.sum(s, axis=-1, keepdims=True)
+                s = np.repeat(s, 3, axis=-1)
+                shap_list.append(s)
+
+        else:
+            # fallback (handles unexpected formats)
+            s = np.squeeze(shap_values)
+            if s.ndim == 3:
+                if s.shape[-1] == 1:
+                    s = np.repeat(s, 3, axis=-1)
+                shap_list.append(s)
+
+        # -------------------------------
+        # SAVE IMAGE
+        # -------------------------------
+        os.makedirs(save_dir, exist_ok=True)
+        output_path = os.path.join(save_dir, f"shap_{model_name}.png")
+
+        plt.figure()
+        shap.image_plot(shap_list, img_arr, show=False)
+        plt.savefig(output_path, bbox_inches="tight")
+        plt.close()
+
+        return output_path,saliency_map
     
+    
+    
+
+    # -----------------------------
+    # Helper: model confidence
+    # -----------------------------
+    def model_confidence(model, img, class_idx):
+        preds = model.predict(img, verbose=0)
+        return float(preds[0][class_idx])
+
+
+    # -----------------------------
+    # MAIN FUNCTION
+    # -----------------------------
+    def generate_explanation_metrics(model, img_array, saliency_map, model_name, save_dir):
+
+        os.makedirs(save_dir, exist_ok=True)
+
+        # -----------------------------
+        # Ensure correct shape
+        # -----------------------------
+        H, W = img_array.shape[1], img_array.shape[2]
+
+        pred_class_idx = int(np.argmax(model.predict(img_array, verbose=0)))
+
+        # -----------------------------
+        # Deletion Test
+        # -----------------------------
+        def deletion_test():
+            img = img_array.copy()
+            saliency = saliency_map.flatten()
+            order = np.argsort(-saliency)
+
+            confidences = []
+            baseline = model_confidence(model, img, pred_class_idx)
+
+            flat_img = img.reshape(-1, 3)
+
+            for i in range(50):
+                k = int((i + 1) / 50 * len(order))
+                flat_img[order[:k]] = 0
+                img_step = flat_img.reshape(1, H, W, 3)
+                conf = model_confidence(model, img_step, pred_class_idx)
+                confidences.append(conf)
+
+            return baseline, confidences
+
+        # -----------------------------
+        # Insertion Test
+        # -----------------------------
+        def insertion_test():
+            saliency = saliency_map.flatten()
+            order = np.argsort(-saliency)
+
+            blank = np.zeros_like(img_array)
+            confidences = []
+
+            flat_blank = blank.reshape(-1, 3)
+            flat_img = img_array.reshape(-1, 3)
+
+            for i in range(50):
+                k = int((i + 1) / 50 * len(order))
+                flat_blank[order[:k]] = flat_img[order[:k]]
+                img_step = flat_blank.reshape(1, H, W, 3)
+                conf = model_confidence(model, img_step, pred_class_idx)
+                confidences.append(conf)
+
+            return confidences
+
+        # -----------------------------
+        # Sensitivity-N
+        # -----------------------------
+        def sensitivity_n():
+            flat_sal = saliency_map.flatten()
+            flat_img = img_array.reshape(-1, 3)
+
+            scores = []
+            deltas = []
+
+            baseline = model_confidence(model, img_array, pred_class_idx)
+
+            for _ in range(200):  # reduced for speed
+                idx = np.random.choice(len(flat_sal), size=200, replace=False)
+
+                masked = flat_img.copy()
+                masked[idx] = 0
+                masked_img = masked.reshape(1, H, W, 3)
+
+                conf = model_confidence(model, masked_img, pred_class_idx)
+                deltas.append(baseline - conf)
+                scores.append(flat_sal[idx].sum())
+
+            return spearmanr(scores, deltas).correlation
+
+        # -----------------------------
+        # Confidence Metrics
+        # -----------------------------
+        def avg_conf_drop():
+            mask = saliency_map > 0.5
+            masked = img_array.copy()
+            masked[0][~mask] = 0
+
+            c1 = model_confidence(model, img_array, pred_class_idx)
+            c2 = model_confidence(model, masked, pred_class_idx)
+
+            return max(0, c1 - c2) / c1
+
+        def avg_conf_gain():
+            mask = saliency_map > 0.5
+            masked = np.zeros_like(img_array)
+            masked[0][mask] = img_array[0][mask]
+
+            c1 = model_confidence(model, img_array, pred_class_idx)
+            c2 = model_confidence(model, masked, pred_class_idx)
+
+            return max(0, c2 - c1)
+
+        # -----------------------------
+        # Run all
+        # -----------------------------
+        baseline, deletion_curve = deletion_test()
+        insertion_curve = insertion_test()
+        sens_n = sensitivity_n()
+        acd = avg_conf_drop()
+        acg = avg_conf_gain()
+
+        # -----------------------------
+        # Save plots
+        # -----------------------------
+        deletion_path = os.path.join(save_dir, f"deletion_{model_name}.png")
+        insertion_path = os.path.join(save_dir, f"insertion_{model_name}.png")
+
+        # Deletion plot
+        plt.figure()
+        x = np.linspace(0, 100, len(deletion_curve))
+        plt.plot(x, deletion_curve)
+        plt.axhline(y=baseline, linestyle="--")
+        plt.xlabel("Deleted %")
+        plt.ylabel("Confidence")
+        plt.title("Deletion Curve")
+        plt.savefig(deletion_path)
+        plt.close()
+
+        # Insertion plot
+        plt.figure()
+        x = np.linspace(0, 100, len(insertion_curve))
+        plt.plot(x, insertion_curve)
+        plt.xlabel("Inserted %")
+        plt.ylabel("Confidence")
+        plt.title("Insertion Curve")
+        plt.savefig(insertion_path)
+        plt.close()
+
+        return {
+            "deletion_image": deletion_path,
+            "insertion_image": insertion_path,
+            "sensitivity_n": float(sens_n),
+            "avg_conf_drop": float(acd),
+            "avg_conf_gain": float(acg)
+        }
+        
     
     @login_manager.user_loader
     def load_user(user_id):
@@ -473,6 +719,21 @@ def create_app():
 
         return response
 
+    def shap_to_saliency(shap_values, pred_class_idx):
+        # Remove batch dimension
+        shap_values = np.squeeze(shap_values, axis=0)  # (H,W,3,C)
+
+        # Select predicted class
+        shap_map = shap_values[..., pred_class_idx]    # (H,W,3)
+
+        # Convert RGB → single channel
+        saliency_map = np.mean(np.abs(shap_map), axis=-1)  # (H,W)
+
+        # Normalize (IMPORTANT)
+        saliency_map -= saliency_map.min()
+        saliency_map /= (saliency_map.max() + 1e-8)
+
+        return saliency_map
 
     @app.route("/upload_predict", methods=["POST"])
     @login_required
@@ -502,6 +763,15 @@ def create_app():
 
         result_name = f"gradcam_{filename}"
         result_path = os.path.join(RESULT_FOLDER, result_name)
+        shap_path,saliency_map = generate_shap_image(img_path, model_name,RESULT_FOLDER,idx)
+
+        metrics = generate_explanation_metrics(
+            model,
+            x,                # preprocessed image (1,H,W,3)
+            saliency_map,     # your SHAP or GradCAM map
+            model_name,
+            RESULT_FOLDER
+        )
 
         if heatmap is not None:
             overlay_gradcam(img_path, heatmap, result_path)
@@ -513,6 +783,12 @@ def create_app():
             label=CLASS_NAMES[idx],
             confidence=round(float(preds[0][idx]) * 100, 2),
             model_used=model_name.capitalize(),
+            shap_url=url_for("static", filename=f"results/shap_{model_name}.png"),
+            deletion_url=url_for("static", filename=f"results/deletion_{model_name}.png"),
+            insertion_url=url_for("static", filename=f"results/insertion_{model_name}.png"),
+            sensitivity_n=metrics["sensitivity_n"],
+            avg_conf_drop=metrics["avg_conf_drop"],
+            avg_conf_gain=metrics["avg_conf_gain"]
         )
 
     @app.route("/logout")
